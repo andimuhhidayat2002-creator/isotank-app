@@ -162,9 +162,10 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
         _groupedItems = {};
         
         // Group items by category
+        // Group items by category
         for (var item in _dynamicItems) {
-           // Skip if not active or not applicable
-           if (item['is_active'] != 1 && item['is_active'] != true) continue;
+           // Backend already filters active items, and API might not return 'is_active' field.
+           // if (item['is_active'] != 1 && item['is_active'] != true) continue;
            
            final appliesTo = item['applies_to'] ?? 'both';
            final activityType = _job?['activity_type'] ?? 'both';
@@ -172,8 +173,6 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
            bool isOutgoing = activityType == 'outgoing_inspection';
            
            if (appliesTo == 'incoming' && !isIncoming) continue;
-           if (appliesTo == 'outgoing' && !isOutgoing) continue;
-
            if (appliesTo == 'outgoing' && !isOutgoing) continue;
 
            final rawCategory = item['category'] ?? 'General';
@@ -326,30 +325,42 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
                   ),
 
                 // Job Info Card (Restored)
-                Card(
-                  elevation: 2,
-                  margin: const EdgeInsets.only(bottom: 16),
-                  color: Colors.blue[50],
-                  child: Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Column(
-                      children: [
-                         Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                            const Text('Job ID', style: TextStyle(fontWeight: FontWeight.bold)),
-                            Text('#${widget.jobId}'),
-                         ]),
-                         const SizedBox(height: 4),
-                         Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                            const Text('Isotank'),
-                            Text(_job?['isotank']?['tank_number'] ?? '-', style: const TextStyle(fontWeight: FontWeight.bold)),
-                         ]),
-                         const SizedBox(height: 4),
-                         Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                            const Text('Activity'),
-                            Text((_job?['activity_type'] ?? '-').toString().toUpperCase()),
-                         ]),
-                      ],
-                    ),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  color: Colors.blue[50], // Light blue background
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Job ID', style: TextStyle(color: Colors.black54)),
+                          Text('#${widget.jobId}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Isotank', style: TextStyle(color: Colors.black54)),
+                          Text(
+                            _job?['isotank']?['iso_number'] ?? _job?['isotank']?['tank_number'] ?? 'Unknown',
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Activity', style: TextStyle(color: Colors.black54)),
+                          Text(
+                            (_job?['activity_type'] ?? '-').toString().replaceAll('_', ' ').toUpperCase(), 
+                            style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0D47A1))
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
 
