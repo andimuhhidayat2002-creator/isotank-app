@@ -74,7 +74,38 @@ class _ReceiverConfirmationScreenState extends State<ReceiverConfirmationScreen>
     }
   }
 
-  // ... (photo methods) ...
+
+  Future<void> _pickPhoto(String itemKey) async {
+    try {
+      final XFile? image = await _imagePicker.pickImage(
+        source: ImageSource.camera,
+        maxWidth: 1920,
+        maxHeight: 1080,
+        imageQuality: 85,
+      );
+
+      if (image != null) {
+        setState(() {
+          _photoFiles[itemKey] = image;
+          _photoPaths[itemKey] = image.path;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error taking photo: $e')),
+        );
+      }
+    }
+  }
+
+  void _removePhoto(String itemKey) {
+    setState(() {
+      _photoFiles[itemKey] = null;
+      _photoPaths[itemKey] = null;
+    });
+  }
+
 
   bool _validateConfirmations() {
     // Check if all items have a decision
