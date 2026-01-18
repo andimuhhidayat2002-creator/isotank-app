@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../data/services/api_service.dart';
@@ -176,7 +177,12 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
            if (appliesTo == 'outgoing' && !isOutgoing) continue;
 
            final rawCategory = item['category'] ?? 'General';
-           final category = rawCategory.toString().toLowerCase(); // Normalize to lowercase
+           var category = rawCategory.toString().toLowerCase(); // Normalize to lowercase
+           
+           // FAILSAFE: Map legacy categories to new structure (in case of old cache)
+           if (category == 'external' || category == 'safety') category = 'b';
+           if (category == 'valve') category = 'c';
+
            if (!_groupedItems.containsKey(category)) {
              _groupedItems[category] = [];
            }
@@ -221,6 +227,36 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
             return _buildTextField(label, key);
           } else if (type == 'number') {
             return _buildTextField(label, key, numeric: true);
+          } else if (type == 'dropdown') {
+          // Dropdown with custom options (SAFE PARSE)
+          List<String> options = [];
+          try {
+             if (item['options'] is List) {
+                options = (item['options'] as List).map((e) => e.toString()).toList();
+             } else if (item['options'] is String) {
+                final decoded = jsonDecode(item['options'] as String);
+                if (decoded is List) {
+                   options = decoded.map((e) => e.toString()).toList();
+                }
+             }
+          } catch(e) {
+             debugPrint('Error parsing options for $key: $e');
+          }
+
+          if (options.isEmpty) return const SizedBox.shrink();
+
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 16.0),
+            child: DropdownButtonFormField<String>(
+              decoration: InputDecoration(labelText: label, border: const OutlineInputBorder()),
+              value: _formData[key]?.toString(),
+              items: options.map((v) => DropdownMenuItem(
+                value: v, 
+                child: Text(v.toUpperCase()),
+              )).toList(),
+              onChanged: (v) => setState(() => _formData[key] = v),
+            ),
+          );
           } else if (type == 'boolean') {
              // Simple Yes/No dropdown or switch
              return Padding(
@@ -257,6 +293,8 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
         ..._formData,
         'job_id': widget.jobId,
         'status': asDraft ? 'draft' : 'completed',
+        'is_draft': asDraft, // Critical for backend validation toggling
+        'inspection_date': DateTime.now().toLocal().toString().split(' ')[0], // Ensure YYYY-MM-DD format
         'activity_type': activityType,
         'filled_at': DateTime.now().toIso8601String(),
       };
@@ -380,158 +418,117 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                // Dynamic Sections (Replacing B, C, D, E)
-                 // B. General Condition
-                 _buildSectionHeader('B. General Condition'),
-                 _buildConditionButtons('Surface', 'surface'),
-                 _buildConditionButtons('Frame', 'frame'),
-                 _buildConditionButtons('Tank Plate', 'tank_plate'),
-                 _buildConditionButtons('Venting Pipe', 'venting_pipe'),
-                 _buildConditionButtons('Explosion Proof Cover', 'explosion_proof_cover'),
-                 _buildConditionButtons('Grounding System', 'grounding_system'),
-                 _buildConditionButtons('Document Container', 'document_container'),
-                 _buildConditionButtons('Safety Label', 'safety_label'),
-                 _buildConditionButtons('Valve Box Door', 'valve_box_door'),
-                 _buildConditionButtons('Valve Box Door Handle', 'valve_box_door_handle'),
-                 
-                 // Dynamic Items (Appended)
-                 _buildDynamicSection('external', 'Additional General Items'),
+                // B. General Condition (Dynamic from Database)
+                _buildDynamicSection('b', 'B. General Condition'),
 
-                 // C. Valve & Piping
-                 _buildSectionHeader('C. Valve & Piping'),
-                 _buildConditionButtons('Valve Condition', 'valve_condition'),
-                 
-                 // Valve Position (Specific Selector)
-                 Padding(
-                   padding: const EdgeInsets.only(bottom: 16.0),
-                   child: DropdownButtonFormField<String>(
-                     decoration: const InputDecoration(labelText: 'Valve Position', border: OutlineInputBorder()),
-                     value: _formData['valve_position']?.toString(),
-                     items: ['correct', 'incorrect'].map((v) => DropdownMenuItem(
-                       value: v, 
-                       child: Text(v.toUpperCase()),
-                     )).toList(),
-                     onChanged: (v) => setState(() => _formData['valve_position'] = v),
-                   ),
-                 ),
+                // C. Valve & Piping (Dynamic from Database)
+                _buildDynamicSection('c', 'C. Valve & Piping'),
+                
+                // D. IBOX System (Hardcoded - contains complex logic)
+                _buildSectionHeader('D. IBOX System'),
+                _buildConditionButtons('IBOX Condition', 'ibox_condition'),
+                
+                _buildReadingStage('IBOX Temperature (°C)', 'ibox_temperature', 1, isOutgoing),
+                _buildReadingStage('IBOX Temperature (°C)', 'ibox_temperature', 2, isOutgoing),
+                _buildTextField('IBOX Pressure (Bar)', 'pressure', numeric: true),
+                _buildTextField('IBOX Level', 'level', numeric: true),
+                _buildTextField('IBOX Battery %', 'battery_percent', numeric: true),
 
-                 _buildConditionButtons('Pipe Joint', 'pipe_joint'),
-                 _buildConditionButtons('Air Source Connection', 'air_source_connection'),
-                 _buildConditionButtons('ESDV', 'esdv'),
-                 _buildConditionButtons('Blind Flange', 'blind_flange'),
-                 _buildConditionButtons('PRV', 'prv'),
-                 
-                 // Dynamic Items (Appended)
-                 _buildDynamicSection('valve', 'Additional Valve Items'),
-                 _buildDynamicSection('safety', 'Additional Safety Items'),
-                 
-                 // Catch-all: Render any other dynamic categories not yet shown (e.g. internal)
-                 ..._groupedItems.keys
-                    .where((k) => !['external', 'valve', 'safety'].contains(k))
-                    .map((k) => _buildDynamicSection(k, 'Additional ${k.toUpperCase()} Items')),
-                 
-                 // Specialized Sections
-                  _buildSectionHeader('D. IBOX System'),
-                  _buildConditionButtons('IBOX Condition', 'ibox_condition'),
-                  
-                  _buildReadingStage('IBOX Temperature (°C)', 'ibox_temperature', 1, isOutgoing),
-                  _buildReadingStage('IBOX Temperature (°C)', 'ibox_temperature', 2, isOutgoing),
-                  _buildTextField('IBOX Pressure (Bar)', 'pressure', numeric: true),
-                  _buildTextField('IBOX Level', 'level', numeric: true),
-                  _buildTextField('IBOX Battery %', 'battery_percent', numeric: true),
-
-                  _buildSectionHeader('E. Instrument'),
-                  _buildConditionButtons('Pressure Gauge Condition', 'pressure_gauge_condition'),
-                  
-                  // Calibration Card
-                  Card(
-                    color: Colors.grey[50],
-                    margin: const EdgeInsets.only(bottom: 16),
-                    child: Padding(
-                      padding: const EdgeInsets.all(12.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('Calibration Status (From Master)', style: TextStyle(fontWeight: FontWeight.bold)),
-                          const SizedBox(height: 8),
-                          _buildTextField('PG Serial Number', 'pressure_gauge_serial'),
-                          _buildDatePicker('PG Calibration Date', 'pressure_gauge_calibration_date'),
-                          _buildDatePicker('PG Valid Until', 'pressure_gauge_valid_until'),
-                          
-                          SwitchListTile(
-                            title: const Text('Reject Calibration'),
-                            subtitle: const Text('Triggers calibration activity'),
-                            value: _formData['pressure_gauge_status'] == 'rejected',
-                            onChanged: (val) {
-                              setState(() {
-                                _formData['pressure_gauge_status'] = val ? 'rejected' : 'valid';
-                              });
-                            },
-                            activeColor: Colors.red,
-                          ),
-                        ],
-                      ),
+                // E. Instrument (Hardcoded - contains calibration logic)
+                _buildSectionHeader('E. Instrument'),
+                _buildConditionButtons('Pressure Gauge Condition', 'pressure_gauge_condition'),
+                
+                // Calibration Card
+                Card(
+                  color: Colors.grey[50],
+                  margin: const EdgeInsets.only(bottom: 16),
+                  child: Padding(
+                    padding: const EdgeInsets.all(12.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Calibration Status (From Master)', style: TextStyle(fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 8),
+                        _buildTextField('PG Serial Number', 'pressure_gauge_serial'),
+                        _buildDatePicker('PG Calibration Date', 'pressure_gauge_calibration_date'),
+                        _buildDatePicker('PG Valid Until', 'pressure_gauge_valid_until'),
+                        
+                        SwitchListTile(
+                          title: const Text('Reject Calibration'),
+                          subtitle: const Text('Triggers calibration activity'),
+                          value: _formData['pressure_gauge_status'] == 'rejected',
+                          onChanged: (val) {
+                            setState(() {
+                              _formData['pressure_gauge_status'] = val ? 'rejected' : 'valid';
+                            });
+                          },
+                          activeColor: Colors.red,
+                        ),
+                      ],
                     ),
                   ),
-                  
-                  _buildReadingStage('PG Reading (Bar)', 'pressure', 1, isOutgoing),
-                  _buildReadingStage('PG Reading (Bar)', 'pressure', 2, isOutgoing),
-                  
-                  _buildConditionButtons('Level Gauge Condition', 'level_gauge_condition'),
-                  _buildReadingStage('Level Reading (mm/%)', 'level', 1, isOutgoing),
-                  _buildReadingStage('Level Reading (mm/%)', 'level', 2, isOutgoing),
-                  
-                  _buildSectionHeader('F. Vacuum System'),
-                  _buildDatePicker('Vacuum Check Datetime', 'vacuum_check_datetime', includeTime: true),
-                  Row(
-                    children: [
-                      Expanded(flex: 2, child: _buildTextField('Vacuum Value', 'vacuum_value', numeric: true)),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        flex: 1,
-                        child: DropdownButtonFormField<String>(
-                          decoration: const InputDecoration(labelText: 'Unit'),
-                          value: _formData['vacuum_unit'] ?? 'mtorr',
-                          items: ['mtorr', 'torr', 'scientific'].map((u) => DropdownMenuItem(
-                            value: u, 
-                            child: Text(u.toUpperCase()),
-                          )).toList(),
-                          onChanged: (v) => setState(() => _formData['vacuum_unit'] = v),
-                        ),
+                ),
+                
+                _buildReadingStage('PG Reading (Bar)', 'pressure', 1, isOutgoing),
+                _buildReadingStage('PG Reading (Bar)', 'pressure', 2, isOutgoing),
+                
+                _buildConditionButtons('Level Gauge Condition', 'level_gauge_condition'),
+                _buildReadingStage('Level Reading (mm/%)', 'level', 1, isOutgoing),
+                _buildReadingStage('Level Reading (mm/%)', 'level', 2, isOutgoing),
+                
+                // F. Vacuum System (Hardcoded - contains vacuum logic)
+                _buildSectionHeader('F. Vacuum System'),
+                _buildDatePicker('Vacuum Check Datetime', 'vacuum_check_datetime', includeTime: true),
+                Row(
+                  children: [
+                    Expanded(flex: 2, child: _buildTextField('Vacuum Value', 'vacuum_value', numeric: true)),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      flex: 1,
+                      child: DropdownButtonFormField<String>(
+                        decoration: const InputDecoration(labelText: 'Unit'),
+                        value: _formData['vacuum_unit'] ?? 'mtorr',
+                        items: ['mtorr', 'torr', 'scientific'].map((u) => DropdownMenuItem(
+                          value: u, 
+                          child: Text(u.toUpperCase()),
+                        )).toList(),
+                        onChanged: (v) => setState(() => _formData['vacuum_unit'] = v),
                       ),
-                    ],
-                  ),
-                  // Vacuum Warning Logic
-                  Builder(builder: (ctx) {
-                     double? v = double.tryParse(_formData['vacuum_value']?.toString() ?? '');
-                     String u = _formData['vacuum_unit'] ?? 'mtorr';
-                     double mtorr = (u == 'torr') ? (v ?? 0) * 1000 : (v ?? 0);
-                     if (v != null && mtorr > 8) {
-                        return Container(
-                          margin: const EdgeInsets.only(bottom: 12),
-                          padding: const EdgeInsets.all(8),
-                          color: Colors.red[100],
-                          child: Row(
-                             children: [
-                               const Icon(Icons.warning, color: Colors.red),
-                               const SizedBox(width: 8),
-                               Expanded(child: Text("Warning: Vacuum > 8 mTorr! This will trigger a Vacuum Suction Activity.", style: TextStyle(color: Colors.red[900], fontWeight: FontWeight.bold))),
-                             ]
-                          )
-                        );
-                     }
-                     return const SizedBox.shrink();
-                  }),
+                    ),
+                  ],
+                ),
+                // Vacuum Warning Logic
+                Builder(builder: (ctx) {
+                   double? v = double.tryParse(_formData['vacuum_value']?.toString() ?? '');
+                   String u = _formData['vacuum_unit'] ?? 'mtorr';
+                   double mtorr = (u == 'torr') ? (v ?? 0) * 1000 : (v ?? 0);
+                   if (v != null && mtorr > 8) {
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        padding: const EdgeInsets.all(8),
+                        color: Colors.red[100],
+                        child: Row(
+                           children: [
+                             const Icon(Icons.warning, color: Colors.red),
+                             const SizedBox(width: 8),
+                             Expanded(child: Text("Warning: Vacuum > 8 mTorr! This will trigger a Vacuum Suction Activity.", style: TextStyle(color: Colors.red[900], fontWeight: FontWeight.bold))),
+                           ]
+                        )
+                      );
+                   }
+                   return const SizedBox.shrink();
+                }),
 
-                  _buildTextField('Vacuum Temp (°C)', 'vacuum_temperature', numeric: true),
-                  _buildConditionButtons('Vacuum Gauge Condition', 'vacuum_gauge_condition'),
-                  _buildConditionButtons('Vacuum Port Suction Condition', 'vacuum_port_suction_condition'),
-                  
-                  _buildSectionHeader('G. PSV'),
-                  _buildPSVSection(1),
-                  _buildPSVSection(2),
-                  _buildPSVSection(3),
-                  _buildPSVSection(4),
+                _buildTextField('Vacuum Temp (°C)', 'vacuum_temperature', numeric: true),
+                _buildConditionButtons('Vacuum Gauge Condition', 'vacuum_gauge_condition'),
+                _buildConditionButtons('Vacuum Port Suction Condition', 'vacuum_port_suction_condition'),
+                
+                // G. PSV (Hardcoded - contains calibration logic)
+                _buildSectionHeader('G. PSV'),
+                _buildPSVSection(1),
+                _buildPSVSection(2),
+                _buildPSVSection(3),
+                _buildPSVSection(4),
 
                   _buildSectionHeader('H. Filling Status'),
                   FillingStatusSelector(
