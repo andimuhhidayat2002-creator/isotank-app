@@ -278,29 +278,8 @@ class _MaintenanceFormScreenState extends State<MaintenanceFormScreen> {
   }
 
   Widget _buildPhotoWidget(String photoPath) {
-    if (photoPath.startsWith('http')) {
-      // Network image (from server)
-      return Image.network(
-        'http://192.168.1.4:8000/storage/$photoPath',
-        fit: BoxFit.cover,
-        width: double.infinity,
-        height: 200,
-        errorBuilder: (context, error, stackTrace) => Container(
-          color: Colors.grey[200],
-          child: const Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.wifi_off, size: 50, color: Colors.grey),
-                SizedBox(height: 8),
-                Text('Photo view available online only', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey)),
-              ],
-            ),
-          ),
-        ),
-      );
-    } else if (photoPath.startsWith('blob:') || photoPath.startsWith('http://') || photoPath.startsWith('https://')) {
-      // Web blob URL or network URL
+    if (photoPath.startsWith('http://') || photoPath.startsWith('https://')) {
+      // Full Network URL
       return Image.network(
         photoPath,
         fit: BoxFit.cover,
@@ -312,37 +291,6 @@ class _MaintenanceFormScreenState extends State<MaintenanceFormScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.broken_image, size: 50, color: Colors.grey),
-                Text('Could not load photo'),
-              ],
-            ),
-          ),
-        ),
-      );
-    } else {
-      // Local file
-      if (kIsWeb) {
-        return const Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.image_not_supported, size: 50, color: Colors.grey),
-              Text('Local file not supported on Web'),
-            ],
-          ),
-        );
-      }
-      return Image.file(
-        File(photoPath),
-        fit: BoxFit.cover,
-        width: double.infinity,
-        height: 200,
-        errorBuilder: (context, error, stackTrace) => Container(
-          color: Colors.grey[200],
-          child: const Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
                 Icon(Icons.wifi_off, size: 50, color: Colors.grey),
                 SizedBox(height: 8),
                 Text('Photo view available online only', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey)),
@@ -351,6 +299,65 @@ class _MaintenanceFormScreenState extends State<MaintenanceFormScreen> {
           ),
         ),
       );
+    } else if (photoPath.startsWith('blob:')) {
+      // Web Blob
+      return Image.network(
+        photoPath,
+        fit: BoxFit.cover,
+        width: double.infinity,
+        height: 200,
+        errorBuilder: (context, error, stackTrace) => const Center(child: Icon(Icons.broken_image)),
+      );
+    } else {
+      // Either a local file (captured offline) or a relative path from server
+      // Heuristic: If we are on mobile and the file exists locally, use it.
+      // Otherwise, assume it is a relative server path and prepend base URL.
+      // Note: 'before_photo' from inspection is always a server path.
+      
+      bool isLocalFile = !kIsWeb && File(photoPath).existsSync();
+
+      if (isLocalFile) {
+        return Image.file(
+          File(photoPath),
+          fit: BoxFit.cover,
+          width: double.infinity,
+          height: 200,
+          errorBuilder: (context, error, stackTrace) => Container(
+            color: Colors.grey[200],
+            child: const Center(child: Text('Error loading local file')),
+          ),
+        );
+      } else {
+        // Assume relative server path
+        final baseUrl = ApiService().baseUrl.replaceAll('/api', '');
+        // Clean path to avoid double slashes
+        final cleanPath = photoPath.startsWith('/') ? photoPath.substring(1) : photoPath;
+        // Check if path implies storage
+        final fullUrl = (cleanPath.startsWith('storage/')) 
+            ? '$baseUrl/$cleanPath' 
+            : '$baseUrl/storage/$cleanPath';
+
+        return Image.network(
+          fullUrl,
+          fit: BoxFit.cover,
+          width: double.infinity,
+          height: 200,
+          errorBuilder: (context, error, stackTrace) => Container(
+            color: Colors.grey[200],
+            child: const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.wifi_off, size: 50, color: Colors.grey),
+                  SizedBox(height: 8),
+                   // Show error details for debugging
+                  Text('Photo view available online only', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey)),
+                ],
+              ),
+            ),
+          ),
+        );
+      }
     }
   }
 
@@ -509,20 +516,36 @@ class _MaintenanceFormScreenState extends State<MaintenanceFormScreen> {
             if (_currentStatus == 'open')
               Column(
                 children: [
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: _isLoading ? null : () => _updateStatus('on_progress'),
-                      icon: const Icon(Icons.play_arrow),
-                      label: const Text('START WORK'),
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        backgroundColor: Colors.orange,
-                        foregroundColor: Colors.white,
+                   Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: _isLoading ? null : () => _updateStatus('deferred'),
+                          icon: const Icon(Icons.pause_circle_filled),
+                          label: const Text('DEFER'),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            foregroundColor: Colors.grey[700],
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        flex: 2,
+                        child: ElevatedButton.icon(
+                          onPressed: _isLoading ? null : () => _updateStatus('on_progress'),
+                          icon: const Icon(Icons.play_arrow),
+                          label: const Text('START WORK'),
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            backgroundColor: Colors.orange,
+                            foregroundColor: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
+                   ),
+                   const SizedBox(height: 12),
                 ],
               ),
 
@@ -542,8 +565,47 @@ class _MaintenanceFormScreenState extends State<MaintenanceFormScreen> {
                       ),
                     ),
                   ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: _isLoading ? null : () => _updateStatus('deferred'),
+                      icon: const Icon(Icons.pause_circle_outline),
+                      label: const Text('DEFER JOB'),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        foregroundColor: Colors.grey[700],
+                      ),
+                    ),
+                  ),
                 ],
               ),
+
+              if (_currentStatus == 'deferred')
+                 Column(
+                    children: [
+                       Container(
+                         padding: const EdgeInsets.all(12),
+                         width: double.infinity,
+                         decoration: BoxDecoration(color: Colors.grey[200], borderRadius: BorderRadius.circular(8)),
+                         child: const Text('This job is deferred. Click Start to resume.', textAlign: TextAlign.center),
+                       ),
+                       const SizedBox(height: 12),
+                       SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: _isLoading ? null : () => _updateStatus('on_progress'),
+                          icon: const Icon(Icons.play_arrow),
+                          label: const Text('RESUME WORK'),
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            backgroundColor: Colors.orange,
+                            foregroundColor: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ]
+                 ),
 
             const SizedBox(height: 32),
           ],
