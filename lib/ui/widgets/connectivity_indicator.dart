@@ -11,7 +11,7 @@ class ConnectivityIndicator extends StatefulWidget {
 }
 
 class _ConnectivityIndicatorState extends State<ConnectivityIndicator> {
-  final ConnectivityService _connectivityService = ConnectivityService.instance;
+  final ConnectivityService _connectivityService = ConnectivityService();
   late StreamSubscription<bool> _connectivitySubscription;
   bool _isOnline = true;
 
@@ -19,7 +19,7 @@ class _ConnectivityIndicatorState extends State<ConnectivityIndicator> {
   void initState() {
     super.initState();
     _isOnline = _connectivityService.isOnline;
-    _connectivitySubscription = _connectivityService.connectivityStream.listen(
+    _connectivitySubscription = _connectivityService.connectionStatus.listen(
       (isOnline) {
         if (mounted) {
           setState(() {

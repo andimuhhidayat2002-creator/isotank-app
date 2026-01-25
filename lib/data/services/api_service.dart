@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 import 'connectivity_service.dart';
 import 'database_helper.dart';
 import 'dart:convert';
@@ -47,6 +48,22 @@ class ApiService {
     if (kDebugMode) {
       print('✅ Token set: Bearer ${token.substring(0, 20)}...');
       print('✅ Current headers: ${_dio.options.headers}');
+    }
+  }
+
+  // Profile Signature Update
+  Future<Map<String, dynamic>> uploadProfileSignature(File file) async {
+    try {
+      final formData = FormData();
+      formData.files.add(MapEntry(
+        'signature',
+        await MultipartFile.fromFile(file.path, filename: 'signature.png'),
+      ));
+
+      final response = await _dio.post('/me/signature', data: formData);
+      return response.data;
+    } on DioException catch (e) {
+      throw _handleError(e);
     }
   }
 
@@ -664,14 +681,19 @@ class ApiService {
   }
 
   // Inspection Items Method
-  Future<List<dynamic>> getInspectionItems() async {
+  Future<List<dynamic>> getInspectionItems({String? tankCategory}) async {
     try {
       // Try to fetch from server
-      final response = await _dio.get('/inspection-items');
+      final queryParams = <String, dynamic>{};
+      if (tankCategory != null) queryParams['tank_category'] = tankCategory;
+      
+      final response = await _dio.get('/inspection-items', queryParameters: queryParams);
       final items = response.data['data'];
       
       // Cache items for offline use
-      await _db.cacheJob(0, 'inspection_items', {'items': items});
+      // Use different cache type for different categories
+      final cacheType = tankCategory != null ? 'inspection_items_$tankCategory' : 'inspection_items';
+      await _db.cacheJob(0, cacheType, {'items': items});
       
       return items;
     } on DioException catch (e) {
@@ -681,14 +703,24 @@ class ApiService {
           e.type == DioExceptionType.connectionError ||
           !_connectivity.isOnline) {
           
+          final cacheType = tankCategory != null ? 'inspection_items_$tankCategory' : 'inspection_items';
           final db = await _db.database;
-          final results = await db.query('cached_jobs', where: 'id = ? AND type = ?', whereArgs: [0, 'inspection_items']);
+          final results = await db.query('cached_jobs', where: 'id = ? AND type = ?', whereArgs: [0, cacheType]);
           
           if (results.isNotEmpty) {
              final cached = decodeJson(results.first['data'] as String);
              return cached['items'] ?? [];
           }
-          // If no cache, return empty list (or fall back to hardcoded defaults in UI)
+          
+          // Fallback: If T75 (default) was requested or nothing found, try default key
+          if (tankCategory == 'T75' || tankCategory != null) {
+              final defaultRes = await db.query('cached_jobs', where: 'id = ? AND type = ?', whereArgs: [0, 'inspection_items']);
+              if (defaultRes.isNotEmpty) {
+                 final cached = decodeJson(defaultRes.first['data'] as String);
+                 return cached['items'] ?? [];
+              }
+          }
+          
           return [];
        }
        throw _handleError(e);

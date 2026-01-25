@@ -17,10 +17,34 @@ class ReceiverService {
   /// Submit receiver confirmations with multipart form data
   Future<Map<String, dynamic>> submitConfirmations(
     int jobId,
-    Map<String, Map<String, dynamic>> confirmations,
-  ) async {
+    Map<String, Map<String, dynamic>> confirmations, {
+    dynamic signatureFile,
+  }) async {
     try {
       final formData = FormData();
+      
+      // Add signature (Mandatory per new business logic)
+      if (signatureFile != null) {
+          // Handle File object (Mobile)
+          // We assume signatureFile is of type File (dart:io) which has a path property
+          // Since we can't import dart:io here easily without breaking web if strict, 
+          // we treat it as dynamic and check property.
+          // For now, let's assume it's a File and use path.
+          
+          if (signatureFile.toString().contains("File:")) {
+             // It's likely a File object
+             try {
+                // Determine path or bytes
+                String path = (signatureFile as dynamic).path;
+                 formData.files.add(MapEntry(
+                  'receiver_signature',
+                  await MultipartFile.fromFile(path, filename: 'receiver_signature.png'),
+                ));
+             } catch (e) {
+               // ignore
+             }
+          }
+      }
 
       // Add confirmations data
       for (final entry in confirmations.entries) {

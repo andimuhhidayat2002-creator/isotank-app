@@ -145,11 +145,11 @@ class _InspectionListWithSearchState extends State<InspectionListWithSearch> {
                             const SizedBox(height: 8),
                             Row(
                               children: [
-                                Icon(Icons.event_note, size: 16, color: Colors.blue[700]),
+                                Icon(Icons.event_note, size: 16, color: Theme.of(context).colorScheme.primary),
                                 const SizedBox(width: 4),
                                 Text(
                                   job['activity_type']?.toString().split('_').join(' ').toUpperCase() ?? 'INSPECTION',
-                                  style: TextStyle(color: Colors.blue[700], fontWeight: FontWeight.bold),
+                                  style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.bold),
                                 ),
                               ],
                             ),

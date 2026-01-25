@@ -30,10 +30,10 @@ class _LoginScreenState extends State<LoginScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.storage_rounded,
                     size: 80,
-                    color: Color(0xFF0D47A1),
+                    color: Theme.of(context).colorScheme.primary,
                   ),
                   const SizedBox(height: 16),
                   Text(
@@ -41,7 +41,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                           fontWeight: FontWeight.bold,
-                          color: const Color(0xFF0D47A1),
+                          color: Theme.of(context).colorScheme.primary,
                         ),
                   ),
                   const SizedBox(height: 8),
@@ -82,7 +82,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     },
                   ),
                   const SizedBox(height: 24),
-                  FilledButton(
+                  ElevatedButton(
                     onPressed: authProvider.isLoading
                         ? null
                         : () async {
@@ -102,10 +102,6 @@ class _LoginScreenState extends State<LoginScreen> {
                               }
                             }
                           },
-                    style: FilledButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      backgroundColor: const Color(0xFF0D47A1),
-                    ),
                     child: authProvider.isLoading
                         ? const SizedBox(
                             height: 20,

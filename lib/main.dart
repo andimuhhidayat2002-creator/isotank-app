@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'logic/providers/auth_provider.dart';
 import 'ui/screens/login_screen.dart';
 import 'ui/screens/home_screen.dart';
+import 'ui/theme/kayan_theme.dart';
 import 'data/services/connectivity_service.dart';
 import 'data/services/sync_service.dart';
+import 'ui/screens/profile/profile_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -30,26 +31,13 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AuthProvider()),
       ],
       child: MaterialApp(
-        title: 'Isotank Inspection System',
+        title: 'KAYAN LNG - Isotank Management',
         debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: const Color(0xFF0D47A1), // Professional Blue
-            primary: const Color(0xFF0D47A1),
-            secondary: const Color(0xFF1976D2),
-            surface: Colors.white,
-          ),
-          useMaterial3: true,
-          textTheme: GoogleFonts.interTextTheme(),
-          inputDecorationTheme: InputDecorationTheme(
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-            filled: true,
-            fillColor: Colors.grey[50],
-          ),
-        ),
+        theme: KayanTheme.lightTheme,
         home: const AuthWrapper(),
+        routes: {
+          '/profile': (context) => const ProfileScreen(),
+        },
       ),
     );
   }

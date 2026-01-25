@@ -223,7 +223,9 @@ class _MaintenanceFormScreenState extends State<MaintenanceFormScreen> {
         ),
         const SizedBox(height: 8),
         GestureDetector(
-          onTap: isReadOnly ? null : onTakePhoto,
+          onTap: photoPath != null
+              ? () => _viewFullScreen(photoPath)
+              : (isReadOnly ? null : onTakePhoto),
           child: Container(
             height: 200,
             decoration: BoxDecoration(
@@ -247,9 +249,25 @@ class _MaintenanceFormScreenState extends State<MaintenanceFormScreen> {
                       ),
                     ],
                   )
-                : ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: _buildPhotoWidget(photoPath),
+                : Stack(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: _buildPhotoWidget(photoPath),
+                      ),
+                      Positioned(
+                        right: 8,
+                        bottom: 8,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: Colors.black54,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: const Icon(Icons.zoom_in, color: Colors.white, size: 20),
+                        ),
+                      ),
+                    ],
                   ),
           ),
         ),
@@ -277,88 +295,112 @@ class _MaintenanceFormScreenState extends State<MaintenanceFormScreen> {
     );
   }
 
-  Widget _buildPhotoWidget(String photoPath) {
+  void _viewFullScreen(String photoPath) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: EdgeInsets.zero,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            InteractiveViewer(
+              panEnabled: true,
+              minScale: 0.5,
+              maxScale: 4.0,
+              child: _buildPhotoWidget(photoPath, fit: BoxFit.contain),
+            ),
+            Positioned(
+              top: 40,
+              right: 20,
+              child: IconButton(
+                icon: const Icon(Icons.close, color: Colors.white, size: 30),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _resolvePhotoUrl(String photoPath) {
+    if (photoPath.startsWith('http://') || photoPath.startsWith('https://') || photoPath.startsWith('blob:')) {
+      return photoPath;
+    }
+    
+    // Check local file
+    bool isLocalFile = !kIsWeb && File(photoPath).existsSync();
+    if (isLocalFile) return photoPath; // Return path as is for local file
+
+    // Relative path handling
+    final baseUrl = ApiService().baseUrl.replaceAll('/api', '');
+    final cleanPath = photoPath.startsWith('/') ? photoPath.substring(1) : photoPath;
+    return (cleanPath.startsWith('storage/')) 
+        ? '$baseUrl/$cleanPath' 
+        : '$baseUrl/storage/$cleanPath';
+  }
+
+  Widget _buildPhotoWidget(String photoPath, {BoxFit fit = BoxFit.cover}) {
     if (photoPath.startsWith('http://') || photoPath.startsWith('https://')) {
-      // Full Network URL
       return Image.network(
         photoPath,
-        fit: BoxFit.cover,
+        fit: fit,
         width: double.infinity,
-        height: 200,
-        errorBuilder: (context, error, stackTrace) => Container(
-          color: Colors.grey[200],
-          child: const Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.wifi_off, size: 50, color: Colors.grey),
-                SizedBox(height: 8),
-                Text('Photo view available online only', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey)),
-              ],
-            ),
-          ),
-        ),
+        height: fit == BoxFit.cover ? 200 : null,
+        errorBuilder: (context, error, stackTrace) => _buildErrorWidget(),
       );
     } else if (photoPath.startsWith('blob:')) {
-      // Web Blob
       return Image.network(
         photoPath,
-        fit: BoxFit.cover,
+        fit: fit,
         width: double.infinity,
-        height: 200,
+        height: fit == BoxFit.cover ? 200 : null,
         errorBuilder: (context, error, stackTrace) => const Center(child: Icon(Icons.broken_image)),
       );
     } else {
-      // Either a local file (captured offline) or a relative path from server
-      // Heuristic: If we are on mobile and the file exists locally, use it.
-      // Otherwise, assume it is a relative server path and prepend base URL.
-      // Note: 'before_photo' from inspection is always a server path.
-      
       bool isLocalFile = !kIsWeb && File(photoPath).existsSync();
 
       if (isLocalFile) {
         return Image.file(
           File(photoPath),
-          fit: BoxFit.cover,
+          fit: fit,
           width: double.infinity,
-          height: 200,
+          height: fit == BoxFit.cover ? 200 : null,
           errorBuilder: (context, error, stackTrace) => Container(
             color: Colors.grey[200],
             child: const Center(child: Text('Error loading local file')),
           ),
         );
       } else {
-        // Assume relative server path
-        final baseUrl = ApiService().baseUrl.replaceAll('/api', '');
-        // Clean path to avoid double slashes
-        final cleanPath = photoPath.startsWith('/') ? photoPath.substring(1) : photoPath;
-        // Check if path implies storage
-        final fullUrl = (cleanPath.startsWith('storage/')) 
-            ? '$baseUrl/$cleanPath' 
-            : '$baseUrl/storage/$cleanPath';
+        // Use helper to resolve full URL
+        final fullUrl = _resolvePhotoUrl(photoPath);
 
         return Image.network(
           fullUrl,
-          fit: BoxFit.cover,
+          fit: fit,
           width: double.infinity,
-          height: 200,
-          errorBuilder: (context, error, stackTrace) => Container(
-            color: Colors.grey[200],
-            child: const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.wifi_off, size: 50, color: Colors.grey),
-                  SizedBox(height: 8),
-                   // Show error details for debugging
-                  Text('Photo view available online only', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey)),
-                ],
-              ),
-            ),
-          ),
+          height: fit == BoxFit.cover ? 200 : null,
+          errorBuilder: (context, error, stackTrace) => _buildErrorWidget(),
         );
       }
     }
+  }
+
+  Widget _buildErrorWidget() {
+    return Container(
+      color: Colors.grey[200],
+      child: const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.wifi_off, size: 50, color: Colors.grey),
+            SizedBox(height: 8),
+            Text('Photo view available online only', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey)),
+          ],
+        ),
+      ),
+    );
   }
 
   @override

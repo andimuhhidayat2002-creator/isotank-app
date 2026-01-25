@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:flutter/foundation.dart';
 import '../../../data/services/receiver_service.dart';
 import '../../../data/services/file_manager_service.dart';
+import '../profile/signature_pad_screen.dart';
 
 class ReceiverConfirmationScreen extends StatefulWidget {
   final int jobId;
@@ -25,6 +26,7 @@ class _ReceiverConfirmationScreenState extends State<ReceiverConfirmationScreen>
   final Map<String, String> _decisions = {}; // itemKey -> 'ACCEPT' or 'REJECT'
   final Map<String, String?> _photoPaths = {}; // itemKey -> photo path or XFile path
   final Map<String, XFile?> _photoFiles = {}; // itemKey -> XFile (for web)
+  File? _signatureFile;
 
   // 10 General Condition Items
   // 10 General Condition Items (REMOVED: Now loaded dynamically from API)
@@ -106,6 +108,19 @@ class _ReceiverConfirmationScreenState extends State<ReceiverConfirmationScreen>
     });
   }
 
+  void _openSignaturePad() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => SignaturePadScreen(
+          onSaved: (file) {
+            setState(() => _signatureFile = file);
+          },
+        ),
+      ),
+    );
+  }
+
 
   bool _validateConfirmations() {
     // Check if all items have a decision
@@ -129,6 +144,16 @@ class _ReceiverConfirmationScreenState extends State<ReceiverConfirmationScreen>
       return;
     }
 
+    if (_signatureFile == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please provide your signature before submitting.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
     setState(() => _isSubmitting = true);
 
     try {
@@ -146,7 +171,11 @@ class _ReceiverConfirmationScreenState extends State<ReceiverConfirmationScreen>
         };
       }
 
-      final result = await _receiverService.submitConfirmations(widget.jobId, confirmations);
+      final result = await _receiverService.submitConfirmations(
+        widget.jobId, 
+        confirmations,
+        signatureFile: _signatureFile,
+      );
 
       setState(() => _isSubmitting = false);
 
@@ -158,7 +187,7 @@ class _ReceiverConfirmationScreenState extends State<ReceiverConfirmationScreen>
           context: context,
           barrierDismissible: false,
           builder: (context) => AlertDialog(
-            title: Text(allAccepted ? 'All Items Accepted ✓' : 'Some Items Rejected'),
+            title: Text(allAccepted ? 'Confirmation Successful ✓' : 'Items Rejected'),
             content: Text(message),
             actions: [
               TextButton(
@@ -527,6 +556,70 @@ class _ReceiverConfirmationScreenState extends State<ReceiverConfirmationScreen>
             ),
           ),
 
+          // Signature Section (MANDATORY)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            color: Colors.white,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text(
+                  'Receiver Signature (Required)',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                
+                if (_signatureFile != null)
+                  Container(
+                    height: 120,
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey[300]!),
+                      borderRadius: BorderRadius.circular(8),
+                      color: Colors.grey[50],
+                    ),
+                    child: Stack(
+                      children: [
+                        Center(
+                          child: Image.file(
+                            _signatureFile!,
+                            fit: BoxFit.contain,
+                          ),
+                        ),
+                        Positioned(
+                          top: 4,
+                          right: 4,
+                          child: InkWell(
+                            onTap: () => setState(() => _signatureFile = null),
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: const BoxDecoration(
+                                color: Colors.red,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.close, color: Colors.white, size: 16),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                else
+                  OutlinedButton.icon(
+                    onPressed: _openSignaturePad,
+                    icon: const Icon(Icons.edit_document),
+                    label: const Text('TAP TO SIGN'),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      side: const BorderSide(color: Color(0xFF0D47A1)),
+                      foregroundColor: const Color(0xFF0D47A1),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
           // Submit Button
           Container(
             width: double.infinity,
@@ -544,7 +637,7 @@ class _ReceiverConfirmationScreenState extends State<ReceiverConfirmationScreen>
                   ? const CircularProgressIndicator(color: Colors.white)
                   : const Text(
                       'SUBMIT CONFIRMATION',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
                     ),
             ),
           ),

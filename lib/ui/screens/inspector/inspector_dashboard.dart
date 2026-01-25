@@ -83,51 +83,67 @@ class _InspectorDashboardState extends State<InspectorDashboard> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Inspector Dashboard'),
         centerTitle: true,
         actions: [
           IconButton(
+            icon: const Icon(Icons.person),
+            onPressed: () {
+              // Create profile directory if not exists
+              Navigator.pushNamed(context, '/profile'); 
+            },
+            tooltip: 'Profile & Signature',
+          ),
+          IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () => Provider.of<AuthProvider>(context, listen: false).logout(),
+            tooltip: 'Logout',
           ),
         ],
       ),
       body: Container(
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Colors.blue.shade50, Colors.white],
-          ),
+          color: colorScheme.surface, // Clean background
         ),
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
             // Status Card
             Card(
-              color: _isOnline ? Colors.green[50] : Colors.red[50],
+              color: _isOnline ? Colors.green.withOpacity(0.05) : colorScheme.errorContainer.withOpacity(0.1),
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                side: BorderSide(color: _isOnline ? Colors.green.withOpacity(0.2) : colorScheme.error.withOpacity(0.2)),
+                borderRadius: BorderRadius.circular(12),
+              ),
               child: Padding(
-                padding: const EdgeInsets.all(12.0),
+                padding: const EdgeInsets.all(16.0),
                 child: Row(
                   children: [
                     Icon(_isOnline ? Icons.wifi : Icons.wifi_off, 
-                         color: _isOnline ? Colors.green : Colors.red),
-                    const SizedBox(width: 12),
+                         color: _isOnline ? Colors.green : colorScheme.error),
+                    const SizedBox(width: 16),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(_isOnline ? 'ONLINE Mode' : 'OFFLINE Mode', 
-                             style: const TextStyle(fontWeight: FontWeight.bold)),
+                             style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 4),
                         Text(_pendingCount > 0 ? '$_pendingCount items pending sync' : 'All data synced',
-                             style: TextStyle(color: _pendingCount > 0 ? Colors.orange : Colors.grey[700], fontSize: 12)),
+                             style: theme.textTheme.bodySmall?.copyWith(
+                               color: _pendingCount > 0 ? Colors.orange : theme.textTheme.bodySmall?.color
+                             )),
                       ],
                     ),
                     const Spacer(),
                     if (_pendingCount > 0 && _isOnline)
                       IconButton(
-                        icon: const Icon(Icons.sync, color: Colors.blue),
+                        icon: Icon(Icons.sync, color: colorScheme.primary),
                         onPressed: _performAutoSync,
                         tooltip: 'Sync Now',
                       ),
@@ -145,7 +161,7 @@ class _InspectorDashboardState extends State<InspectorDashboard> {
                   _MenuCard(
                     title: 'My Inspections',
                     icon: Icons.assignment,
-                    color: Colors.blue.shade700,
+                    color: colorScheme.primary, // Industrial Blue
                     onTap: () {
                       Navigator.push(
                         context,
@@ -153,11 +169,11 @@ class _InspectorDashboardState extends State<InspectorDashboard> {
                       ).then((_) => _updatePendingCount());
                     },
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 16),
                   _MenuCard(
                     title: 'Yard Positioning',
                     icon: Icons.map,
-                    color: Colors.orange.shade700,
+                    color: const Color(0xFFFF6B35), // KayanColors.orange
                     onTap: () {
                       Navigator.push(
                         context,
@@ -165,11 +181,11 @@ class _InspectorDashboardState extends State<InspectorDashboard> {
                       );
                     },
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 16),
                   _MenuCard(
                     title: 'Download Offline Data',
-                    icon: Icons.download_for_offline, // Changed icon
-                    color: Colors.green.shade700,
+                    icon: Icons.download_for_offline,
+                    color: Colors.green, // Success
                     onTap: () async {
                       // Show loading indicator
                       showDialog(
@@ -223,28 +239,37 @@ class _MenuCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: const BorderSide(color: Color(0xFFE5E7EB), width: 1), // Subtle border
+      ),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          padding: const EdgeInsets.all(24), // Reduced padding slightly
-          child: Row( // Changed to Row for better look on wide screens or just stylistic
-            mainAxisAlignment: MainAxisAlignment.center,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
+          child: Row(
             children: [
-              Icon(icon, size: 48, color: color),
-              const SizedBox(width: 24),
-              Expanded( // Prevent overflow
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, size: 32, color: color),
+              ),
+              const SizedBox(width: 20),
+              Expanded(
                 child: Text(
                   title,
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.grey[800],
-                        fontSize: 20,
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.3,
                       ),
                 ),
               ),
+              Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey[400]),
             ],
           ),
         ),
