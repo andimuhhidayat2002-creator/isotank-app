@@ -27,44 +27,76 @@ class _InspectorJobsScreenState extends State<InspectorJobsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('My Inspections'),
-      ),
-      body: FutureBuilder<List<dynamic>>(
-        future: _jobsFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
+    return DefaultTabController(
+      length: 4,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('My Inspections'),
+          bottom: const TabBar(
+            tabs: [
+              Tab(text: 'All'),
+              Tab(text: 'T75'),
+              Tab(text: 'T11'),
+              Tab(text: 'T50'),
+            ],
+          ),
+        ),
+        body: FutureBuilder<List<dynamic>>(
+          future: _jobsFuture,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
 
-          if (snapshot.hasError) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.error_outline, size: 48, color: Colors.orange),
-                  const SizedBox(height: 16),
-                  Text('Error: ${snapshot.error}'),
-                  TextButton(
-                    onPressed: _loadJobs,
-                    child: const Text('Retry'),
-                  ),
-                ],
-              ),
+            if (snapshot.hasError) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.error_outline, size: 48, color: Colors.orange),
+                    const SizedBox(height: 16),
+                    Text('Error: ${snapshot.error}'),
+                    TextButton(
+                      onPressed: _loadJobs,
+                      child: const Text('Retry'),
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            final allJobs = snapshot.data ?? [];
+            
+            // Filter jobs by category
+            // Normalize category: trim and uppercase
+            final t75Jobs = allJobs.where((j) {
+              final cat = (j['isotank']?['tank_category'] ?? '').toString().toUpperCase();
+              return cat == 'T75' || cat == ''; // Default legacy to T75? Or just explicit? Let's check logic.
+              // Actually better to match explicitly.
+            }).toList();
+            
+            final t11Jobs = allJobs.where((j) => (j['isotank']?['tank_category'] ?? '').toString().toUpperCase() == 'T11').toList();
+            final t50Jobs = allJobs.where((j) => (j['isotank']?['tank_category'] ?? '').toString().toUpperCase() == 'T50').toList();
+
+            return TabBarView(
+              children: [
+                _buildList(allJobs),
+                _buildList(t75Jobs, emptyMsg: 'No T75 inspections.'),
+                _buildList(t11Jobs, emptyMsg: 'No T11 inspections.'),
+                _buildList(t50Jobs, emptyMsg: 'No T50 inspections.'),
+              ],
             );
-          }
-
-          final allJobs = snapshot.data ?? [];
-          
-          if (allJobs.isEmpty) {
-            return const Center(child: Text('No open inspections found.'));
-          }
-
-          return InspectionListWithSearch(jobs: allJobs, onRefresh: _loadJobs);
-        },
+          },
+        ),
       ),
     );
+  }
+
+  Widget _buildList(List<dynamic> jobs, {String emptyMsg = 'No open inspections found.'}) {
+    if (jobs.isEmpty) {
+      return Center(child: Text(emptyMsg));
+    }
+    return InspectionListWithSearch(jobs: jobs, onRefresh: _loadJobs);
   }
 }
 

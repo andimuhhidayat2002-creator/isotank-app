@@ -41,6 +41,17 @@ class _ReceiverConfirmationScreenState extends State<ReceiverConfirmationScreen>
   // Helper to get items safely
   List<dynamic> get _dynamicItems => (_inspectionData?['items'] as List?) ?? [];
 
+  // Group items by category for cleaner display
+  Map<String, List<dynamic>> get _groupedItems {
+    final Map<String, List<dynamic>> groups = {};
+    for (var item in _dynamicItems) {
+      final cat = item['category']?.toString() ?? 'General';
+      if (!groups.containsKey(cat)) groups[cat] = [];
+      groups[cat]!.add(item);
+    }
+    return groups;
+  }
+
   @override
   void dispose() {
     for (var controller in _remarkControllers.values) {
@@ -540,19 +551,46 @@ class _ReceiverConfirmationScreenState extends State<ReceiverConfirmationScreen>
             ),
           ),
 
-          // Items List (Dynamic)
+          // Items List (Grouped by Category)
           Expanded(
-            child: ListView.builder(
+            child: ListView(
               padding: const EdgeInsets.all(16),
-              itemCount: (_inspectionData?['items'] as List?)?.length ?? 0,
-              itemBuilder: (context, index) {
-                final items = _inspectionData!['items'] as List;
-                final item = items[index];
-                return _buildItemCard({
-                  'key': item['key'],
-                  'name': item['name'],
-                }, index);
-              },
+              children: _groupedItems.entries.map((entry) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (entry.key != 'General') ...[
+                       Padding(
+                         padding: const EdgeInsets.only(top: 16, bottom: 8),
+                         child: Row(
+                           children: [
+                             const Icon(Icons.grid_view, size: 16, color: Colors.blueGrey),
+                             const SizedBox(width: 8),
+                             Text(
+                               entry.key.toUpperCase(),
+                               style: const TextStyle(
+                                 fontWeight: FontWeight.bold, 
+                                 color: Colors.blueGrey, 
+                                 fontSize: 14,
+                                 letterSpacing: 1.1
+                               ),
+                             ),
+                           ],
+                         ),
+                       ),
+                       const Divider(thickness: 1.5),
+                       const SizedBox(height: 8),
+                    ],
+                    ...entry.value.map((item) {
+                       final index = _dynamicItems.indexOf(item);
+                       return _buildItemCard({
+                         'key': item['key'],
+                         'name': item['name'],
+                       }, index);
+                    }).toList(),
+                  ],
+                );
+              }).toList(),
             ),
           ),
 

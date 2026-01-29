@@ -152,13 +152,6 @@ class _MaintenanceFormScreenState extends State<MaintenanceFormScreen> {
   }
 
   Future<void> _updateStatus(String status) async {
-    if (status == 'closed' && !_formKey.currentState!.validate()) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Work description is required')),
-      );
-      return;
-    }
-
     if (status == 'closed' && _afterPhotoPath == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('After photo is required to close the job')),
@@ -443,6 +436,21 @@ class _MaintenanceFormScreenState extends State<MaintenanceFormScreen> {
                     const SizedBox(height: 8),
                     Text('Item: ${widget.jobData['source_item'] ?? 'N/A'}'),
                     Text('Description: ${widget.jobData['description'] ?? 'N/A'}'),
+                    if (widget.jobData['part_damage'] != null && widget.jobData['part_damage'].toString().isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text('Part Damage: ${widget.jobData['part_damage']}', style: const TextStyle(color: Colors.redAccent)),
+                      ),
+                    if (widget.jobData['damage_type'] != null && widget.jobData['damage_type'].toString().isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text('Damage Type: ${widget.jobData['damage_type']}', style: const TextStyle(fontWeight: FontWeight.w500)),
+                      ),
+                    if (widget.jobData['location'] != null && widget.jobData['location'].toString().isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text('Location: ${widget.jobData['location']}'),
+                      ),
                     const SizedBox(height: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -492,17 +500,11 @@ class _MaintenanceFormScreenState extends State<MaintenanceFormScreen> {
               controller: _workDescriptionController,
               maxLines: 4,
               decoration: const InputDecoration(
-                labelText: 'Work Description',
+                labelText: 'Work Description (Optional)',
                 hintText: 'Describe the work performed...',
                 border: OutlineInputBorder(),
                 prefixIcon: Icon(Icons.description),
               ),
-              validator: (val) {
-                if (_currentStatus == 'closed' && (val == null || val.trim().isEmpty)) {
-                  return 'Work description is required';
-                }
-                return null;
-              },
             ),
             const SizedBox(height: 16),
 

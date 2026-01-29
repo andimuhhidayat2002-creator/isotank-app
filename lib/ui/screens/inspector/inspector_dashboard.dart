@@ -7,6 +7,7 @@ import 'dart:async';
 import '../../../data/services/connectivity_service.dart';
 import 'inspector_jobs_screen.dart'; // We will move the jobs list here
 import 'yard_search_screen.dart';   // We will create this
+import 'isotank_search_screen.dart';
 
 class InspectorDashboard extends StatefulWidget {
   const InspectorDashboard({super.key});
@@ -158,6 +159,18 @@ class _InspectorDashboardState extends State<InspectorDashboard> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                   _MenuCard(
+                    title: 'Isotank Lookup',
+                    icon: Icons.manage_search, // Icon changed to something different from Yard positioning
+                    color: Colors.indigo, // New color for distinction
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const IsotankSearchScreen()),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 16),
                   _MenuCard(
                     title: 'My Inspections',
                     icon: Icons.assignment,

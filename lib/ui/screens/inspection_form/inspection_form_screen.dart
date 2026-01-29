@@ -206,7 +206,36 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
         if (rawDefaults is Map) {
           _formData = Map<String, dynamic>.from(rawDefaults);
           
-          // ... (rest of mapping logic)
+          // FIX: Map Legacy Keys (Labels) to DB Codes for Pre-filling
+          // Iterating through all dynamic items to check if their value exists in _formData under a different key
+          for (var item in _dynamicItems) {
+             final code = item['code'];
+             final label = item['label'];
+             
+             // If the code (e.g. gps_antenna) is NOT set, check alternative keys
+             if (_formData[code] == null) {
+                // 1. Check exact label (e.g. "GPS/4G/LP LAN Antenna")
+                if (_formData.containsKey(label)) {
+                   _formData[code] = _formData[label];
+                }
+                // 2. Check normalized codes/labels (e.g. "GPS_4G...") from older logs
+                else {
+                    // Try replacing spaces/slashes with underscores
+                    final underscoreLabel = label.toString().replaceAll(RegExp(r'[ \./]'), '_');
+                    if (_formData.containsKey(underscoreLabel)) {
+                        _formData[code] = _formData[underscoreLabel];
+                    }
+                    
+                     // Specific Fix for GPS and Pressure Reg
+                    if (code == 'gps_antenna') {
+                         _formData[code] = _formData['GPS_4G_LP_LAN_Antenna'] ?? _formData['GPS_4G_LP_LAN_Antenna'] ?? null;
+                    }
+                    if (code == 'pressure_regulator_esdv') {
+                         _formData[code] = _formData['Pressure_Regulator_ESDV'] ?? _formData['Pressure Regulator ESDV'] ?? null;
+                    }
+                }
+             }
+          }
         }
         
         // ... (rest of defaults)
@@ -432,25 +461,18 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
 
                 // B. General Condition (Dynamic from Database)
                 if (_job?['isotank']?['tank_category'] == 'T11') ...[
-                    _buildDynamicSection('front out side view', 'A. Front Out Side View'),
-                    _buildDynamicSection('rear out side view', 'B. Rear Out Side View'),
-                    _buildDynamicSection('right side', 'C. Right Side'),
-                    _buildDynamicSection('left side', 'D. Left Side'),
-                    _buildDynamicSection('top', 'E. Top'),
-
-                    // F. IBOX Readings (Specific for T11 as requested)
-                    _buildSectionHeader('F. IBOX Readings'),
-                    _buildReadingStage('IBOX Temperature (°C)', 'ibox_temperature', 1, isOutgoing),
-                    _buildReadingStage('IBOX Temperature (°C)', 'ibox_temperature', 2, isOutgoing),
-                    _buildTextField('IBOX Pressure (Bar)', 'pressure', numeric: true),
-                    _buildTextField('IBOX Level', 'level', numeric: true),
+                    _buildDynamicSection('a', 'A. Front Out Side View'),
+                    _buildDynamicSection('b', 'B. Rear Out Side View'),
+                    _buildDynamicSection('c', 'C. Right Side'), 
+                    _buildDynamicSection('d', 'D. Left Side'),
+                    _buildDynamicSection('e', 'E. Top'),
 
                 ] else if (_job?['isotank']?['tank_category'] == 'T50') ...[
-                    _buildDynamicSection('front out side view', 'A. Front Out Side View'),
-                    _buildDynamicSection('rear out side view', 'B. Rear Out Side View'),
-                    _buildDynamicSection('right side/valve box observation', 'C. Right Side/Valve Box Observation'),
-                    _buildDynamicSection('left side', 'D. Left Side'),
-                    _buildDynamicSection('top', 'E. Top'),
+                    _buildDynamicSection('a', 'A. Front Out Side View'),
+                    _buildDynamicSection('b', 'B. Rear Out Side View'),
+                    _buildDynamicSection('c', 'C. Right Side/Valve Box Observation'),
+                    _buildDynamicSection('d', 'D. Left Side'),
+                    _buildDynamicSection('e', 'E. Top'),
 
                 ] else ...[
                     // T75 Default Layout
@@ -712,8 +734,11 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
                   children: [
                      const Text('⚠️ Defect Maintenance Trigger:', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
                      const SizedBox(height: 8),
-                     _buildTextField('Remark / Description', 'remark_$key'),
-                     _buildPhotoField('Evidence Photo', key),
+                     _buildTextField('Remark / Description', 'remark_$key', required: true),
+                     _buildTextField('Part Damage (Optional)', 'part_damage_$key'),
+                     _buildTextField('Type Damage (Optional)', 'damage_type_$key'),
+                     _buildTextField('Location (Optional)', 'location_$key'),
+                     _buildPhotoField('Evidence Photo', key, required: true),
                   ],
                 ),
               ),
@@ -723,7 +748,7 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
     );
   }
 
-  Widget _buildTextField(String label, String key, {bool numeric = false}) {
+  Widget _buildTextField(String label, String key, {bool numeric = false, bool required = false}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12.0),
       child: TextFormField(
@@ -731,6 +756,10 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
         decoration: InputDecoration(labelText: label, border: const OutlineInputBorder()),
         keyboardType: numeric ? TextInputType.number : TextInputType.text,
         onChanged: (v) => _formData[key] = v,
+        validator: (val) {
+           if (required && (val == null || val.trim().isEmpty)) return 'Required';
+           return null;
+        },
       ),
     );
   }
@@ -781,17 +810,45 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
     );
   }
 
-  Widget _buildPhotoField(String label, String key) {
-    final val = _formData['photo_$key'];
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12.0),
-      child: Row(
-        children: [
-          Expanded(child: Text(label)),
-          if (val != null) const Icon(Icons.check_circle, color: Colors.green),
-          IconButton(icon: const Icon(Icons.camera_alt), onPressed: () => _takePhoto(key)),
-        ],
-      ),
+  Widget _buildPhotoField(String label, String key, {bool required = false}) {
+    return FormField<dynamic>(
+      initialValue: _formData['photo_$key'],
+      validator: (val) {
+        // Check actual data as FormField value might be stale if setState handled strictly elsewhere
+        if (required && (_formData['photo_$key'] == null)) {
+          return 'Photo required';
+        }
+        return null;
+      },
+      builder: (state) {
+        final val = _formData['photo_$key'];
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12.0),
+              child: Row(
+                children: [
+                  Expanded(child: Text(label)),
+                  if (val != null) const Icon(Icons.check_circle, color: Colors.green),
+                  IconButton(
+                    icon: const Icon(Icons.camera_alt), 
+                    onPressed: () async {
+                      await _takePhoto(key);
+                      state.didChange(_formData['photo_$key']);
+                    }
+                  ),
+                ],
+              ),
+            ),
+             if (state.hasError) 
+               Padding(
+                  padding: const EdgeInsets.only(left: 8, bottom: 8),
+                  child: Text(state.errorText!, style: const TextStyle(color: Colors.red, fontSize: 12)),
+               )
+          ],
+        );
+      }
     );
   }
 

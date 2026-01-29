@@ -95,6 +95,7 @@ class _MaintenanceJobsListState extends State<MaintenanceJobsList> {
   late Future<List<dynamic>> _jobsFuture;
   final TextEditingController _searchController = TextEditingController();
   String _query = '';
+  String _selectedCategory = 'All'; // Added state variable
   bool _isOnline = true; // State for reactivity
   
   @override
@@ -164,6 +165,26 @@ class _MaintenanceJobsListState extends State<MaintenanceJobsList> {
              ),
           ),
           
+        // Category Filter
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Row(
+            children: ['All', 'T75', 'T11', 'T50'].map((cat) {
+              return Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: ChoiceChip(
+                  label: Text(cat),
+                  selected: _selectedCategory == cat,
+                  onSelected: (selected) {
+                    if (selected) setState(() => _selectedCategory = cat);
+                  },
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+          
         Expanded(
           child: FutureBuilder<List<dynamic>>(
             future: _jobsFuture,
@@ -185,14 +206,19 @@ class _MaintenanceJobsListState extends State<MaintenanceJobsList> {
               final filteredJobs = allJobs.where((job) {
                  final iso = job['isotank']?['iso_number']?.toString().toUpperCase() ?? '';
                  final status = job['status']?.toString().toLowerCase() ?? ''; // Check status
-                 // Filter out closed jobs
-                 return status != 'closed' && iso.contains(_query.toUpperCase());
+                 final cat = (job['isotank']?['tank_category'] ?? '').toString().toUpperCase();
+                 
+                 final matchesCategory = _selectedCategory == 'All' || cat == _selectedCategory;
+                 final matchesSearch = iso.contains(_query.toUpperCase());
+                 final isOpen = status != 'closed';
+                 
+                 return isOpen && matchesCategory && matchesSearch;
               }).toList();
       
               return Column(
                 children: [
                   Padding(
-                    padding: const EdgeInsets.all(16.0),
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0), // Adjusted padding to balance with chips
                     child: TextField(
                       controller: _searchController,
                       decoration: InputDecoration(
