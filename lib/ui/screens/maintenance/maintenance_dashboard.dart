@@ -153,7 +153,7 @@ class _MaintenanceJobsListState extends State<MaintenanceJobsList> {
                                 ),
                                 child: Text(
                                   job['status'].toString().toUpperCase(),
-                                  style: const TextStyle(fontWeight: FontWeight.bold),
+                                  style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
                                 ),
                               ),
                               onTap: () {

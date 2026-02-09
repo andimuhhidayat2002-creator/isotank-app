@@ -373,7 +373,7 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           const Text('Job ID', style: TextStyle(color: Colors.black54)),
-                          Text('#${widget.jobId}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                          Text('#${widget.jobId}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black87)),
                         ],
                       ),
                       const SizedBox(height: 8),
@@ -383,7 +383,7 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
                           const Text('Isotank', style: TextStyle(color: Colors.black54)),
                           Text(
                             _job?['isotank']?['iso_number'] ?? _job?['isotank']?['tank_number'] ?? 'Unknown',
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black87)
                           ),
                         ],
                       ),
@@ -599,7 +599,7 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
       margin: const EdgeInsets.symmetric(vertical: 8),
       color: Colors.grey[200],
-      child: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+      child: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black87)),
     );
   }
 
@@ -703,8 +703,7 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
   }
 
   Widget _buildReadingStage(String label, String key, int stage, bool isOutgoing) {
-    if (!isOutgoing && stage == 2) return const SizedBox.shrink(); 
-    final fieldKey = isOutgoing ? '${key}_$stage' : key;
+    final fieldKey = '${key}_$stage';
     final timestampKey = '${fieldKey}_timestamp';
     final timestamp = _formData[timestampKey];
 

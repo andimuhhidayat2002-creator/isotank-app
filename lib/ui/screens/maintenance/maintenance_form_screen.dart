@@ -389,11 +389,11 @@ class _MaintenanceFormScreenState extends State<MaintenanceFormScreen> {
                   children: [
                     Text(
                       'ISO Number: ${isotank['iso_number'] ?? 'N/A'}',
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.black87),
                     ),
                     const SizedBox(height: 8),
-                    Text('Item: ${widget.jobData['source_item'] ?? 'N/A'}'),
-                    Text('Description: ${widget.jobData['description'] ?? 'N/A'}'),
+                    Text('Item: ${widget.jobData['source_item'] ?? 'N/A'}', style: const TextStyle(color: Colors.black87)),
+                    Text('Description: ${widget.jobData['description'] ?? 'N/A'}', style: const TextStyle(color: Colors.black87)),
                     const SizedBox(height: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
