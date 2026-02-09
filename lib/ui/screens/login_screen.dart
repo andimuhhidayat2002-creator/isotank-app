@@ -31,7 +31,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Image.asset(
-                    'assets/images/header_logo.png', // Changed to PNG for better transparency
+                    'assets/images/logo_ims.jpg',
                     height: 120,
                     fit: BoxFit.contain,
                   ),
