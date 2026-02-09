@@ -582,13 +582,25 @@ class ApiService {
   // Shared Methods
   Future<List<dynamic>> searchIsotanks(String query) async {
     try {
-      // Assuming the backend supports ?search= parameter on /isotanks from previous backend edits
       final response = await _dio.get('/isotanks', queryParameters: {'search': query});
-      if (response.data is Map && response.data.containsKey('data')) {
-         // Pagination wrapper
-         return response.data['data'];
+      final rawData = response.data;
+      
+      if (rawData is List) return rawData;
+      
+      if (rawData is Map) {
+        // Case 1: { "data": [...] }
+        // Case 2: { "data": { "data": [...] } } (Laravel Paginated)
+        // Case 3: { "data": [], "success": true }
+        if (rawData.containsKey('data')) {
+          final dataField = rawData['data'];
+          if (dataField is List) return dataField;
+          if (dataField is Map && dataField.containsKey('data')) {
+            final innerData = dataField['data'];
+            if (innerData is List) return innerData;
+          }
+        }
       }
-      return response.data; // List direct
+      return [];
     } on DioException catch (e) {
       throw _handleError(e);
     }

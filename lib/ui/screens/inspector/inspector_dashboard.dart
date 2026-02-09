@@ -81,8 +81,11 @@ class _InspectorDashboardState extends State<InspectorDashboard> {
     final userName = authProvider.user?['name'] ?? 'Team';
 
     return Scaffold(
+      backgroundColor: const Color(0xFF111827), // Deep Dark Background
       appBar: AppBar(
         title: const Text('Operations Dashboard'),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
@@ -91,45 +94,50 @@ class _InspectorDashboardState extends State<InspectorDashboard> {
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 8),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Status Card - Premium Look
+            // Status Card - Premium Look (Matching Image)
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: _isOnline ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
+                color: _isOnline ? const Color(0xFF064E3B).withOpacity(0.3) : const Color(0xFF7F1D1D).withOpacity(0.3),
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                  color: _isOnline ? Colors.green.withOpacity(0.3) : Colors.red.withOpacity(0.3),
+                  color: _isOnline ? const Color(0xFF10B981).withOpacity(0.2) : const Color(0xFFEF4444).withOpacity(0.2),
                 ),
               ),
               child: Row(
                 children: [
                   Icon(
-                    _isOnline ? Icons.wifi : Icons.wifi_off, 
-                    color: _isOnline ? Colors.green : Colors.red,
+                    _isOnline ? Icons.wifi_tethering : Icons.wifi_tethering_off, 
+                    color: _isOnline ? const Color(0xFF10B981) : const Color(0xFFEF4444),
                     size: 28,
                   ),
                   const SizedBox(width: 16),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        _isOnline ? 'ONLINE Mode' : 'OFFLINE Mode',
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-                      ),
-                      Text(
-                        _pendingCount > 0 ? '$_pendingCount items pending sync' : 'All data synced',
-                        style: TextStyle(
-                          color: _pendingCount > 0 ? Colors.orange : Colors.grey[400],
-                          fontSize: 14
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _isOnline ? 'ONLINE Mode' : 'OFFLINE Mode',
+                          style: TextStyle(
+                            color: _isOnline ? const Color(0xFFD1FAE5) : const Color(0xFFFEE2E2),
+                            fontWeight: FontWeight.bold, 
+                            fontSize: 16
+                          ),
                         ),
-                      ),
-                    ],
+                        Text(
+                          _pendingCount > 0 ? '$_pendingCount items pending sync' : 'All data synced',
+                          style: TextStyle(
+                            color: _isOnline ? const Color(0xFF10B981).withOpacity(0.8) : const Color(0xFFEF4444).withOpacity(0.8),
+                            fontSize: 13
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  const Spacer(),
                   if (_pendingCount > 0 && _isOnline)
                     IconButton(
                       icon: const Icon(Icons.sync, color: Colors.blue),
@@ -139,113 +147,128 @@ class _InspectorDashboardState extends State<InspectorDashboard> {
               ),
             ),
             
-            const SizedBox(height: 24),
+            const SizedBox(height: 28),
             
             Text(
               'Welcome Back, $userName',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 20,
                 fontWeight: FontWeight.bold,
                 letterSpacing: -0.5,
               ),
             ),
-            const SizedBox(height: 8),
-            const Text(
+            const SizedBox(height: 4),
+            Text(
               'Select an operation category to begin.',
-              style: TextStyle(color: Colors.grey, fontSize: 15),
+              style: TextStyle(color: Colors.grey[400], fontSize: 14),
             ),
             
-            const SizedBox(height: 24),
+            const SizedBox(height: 28),
             
-            // Menu Cards
-            _MenuCard(
-              title: 'Isotank Lookup',
-              subtitle: 'Search isotank details',
-              icon: Icons.manage_search,
-              color: const Color(0xFF3B82F6), // Blue
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const IsotankLookupScreen()),
-                );
-              },
-            ),
-            _MenuCard(
-              title: 'Incoming Inspections',
-              subtitle: 'Check in newly arrived tanks',
-              icon: Icons.login_rounded,
-              color: const Color(0xFF10B981),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const IncomingInspectionsScreen()),
-                ).then((_) => _updatePendingCount());
-              },
-            ),
-            _MenuCard(
-              title: 'Outgoing Inspections',
-              subtitle: 'Final check before dispatch',
-              icon: Icons.logout_rounded,
-              color: const Color(0xFFF59E0B),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const OutgoingInspectionsScreen()),
-                ).then((_) => _updatePendingCount());
-              },
-            ),
-            _MenuCard(
-              title: 'Maintenance',
-              subtitle: 'Jobs, Vacuum, Calibration',
-              icon: Icons.handyman,
-              color: const Color(0xFF8B5CF6), // Violet
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const MaintenanceDashboard()),
-                );
-              },
-            ),
-            _MenuCard(
-              title: 'Yard Positioning',
-              icon: Icons.map,
-              color: const Color(0xFFEF4444),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const YardMapScreen()),
-                );
-              },
-            ),
-            _MenuCard(
-              title: 'Download Offline Data',
-              icon: Icons.download_for_offline,
-              color: const Color(0xFF6366F1),
-              onTap: () async {
-                showDialog(
-                  context: context,
-                  barrierDismissible: false,
-                  builder: (ctx) => const Center(child: CircularProgressIndicator()),
-                );
-                
-                try {
-                  await _syncService.downloadOfflineData();
-                  if (context.mounted) {
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('✅ Offline data updated successfully!'), backgroundColor: Colors.green),
+            // Grid Menu
+            GridView.count(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              crossAxisCount: 2,
+              crossAxisSpacing: 16,
+              mainAxisSpacing: 16,
+              childAspectRatio: 0.85,
+              children: [
+                _MenuCard(
+                  title: 'Isotank Lookup',
+                  subtitle: 'Search isotank details',
+                  icon: Icons.search,
+                  color: const Color(0xFF3B82F6), // Blue
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const IsotankLookupScreen()),
                     );
-                    _updatePendingCount();
-                  }
-                } catch (e) {
-                  if (context.mounted) {
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('❌ Download failed: $e'), backgroundColor: Colors.red),
+                  },
+                ),
+                _MenuCard(
+                  title: 'Incoming Inspections',
+                  subtitle: 'Check in newly arrived tanks',
+                  icon: Icons.login_rounded,
+                  color: const Color(0xFF10B981), // Green
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const IncomingInspectionsScreen()),
+                    ).then((_) => _updatePendingCount());
+                  },
+                ),
+                _MenuCard(
+                  title: 'Outgoing Inspections',
+                  subtitle: 'Final check before dispatch',
+                  icon: Icons.logout_rounded,
+                  color: const Color(0xFFF59E0B), // Amber
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const OutgoingInspectionsScreen()),
+                    ).then((_) => _updatePendingCount());
+                  },
+                ),
+                _MenuCard(
+                  title: 'Maintenance',
+                  subtitle: 'Jobs, Vacuum, Calibration',
+                  icon: Icons.handyman_rounded,
+                  color: const Color(0xFF8B5CF6), // Purple
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const MaintenanceDashboard()),
                     );
-                  }
-                }
-              },
+                  },
+                ),
+                _MenuCard(
+                  title: 'Yard Positioning',
+                  subtitle: 'Real-time yard layout',
+                  icon: Icons.map_rounded,
+                  color: const Color(0xFFEF4444), // Red
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const YardMapScreen()),
+                    );
+                  },
+                ),
+                _MenuCard(
+                  title: 'Download Offline Data',
+                  subtitle: 'Offline support',
+                  icon: Icons.download_for_offline_rounded,
+                  color: const Color(0xFF6366F1), // Indigo
+                  onTap: () async {
+                    showDialog(
+                      context: context,
+                      barrierDismissible: false,
+                      builder: (ctx) => const Center(child: CircularProgressIndicator()),
+                    );
+                    
+                    try {
+                      await _syncService.downloadOfflineData();
+                      if (context.mounted) {
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('✅ Offline data updated successfully!'), backgroundColor: Colors.green),
+                        );
+                        _updatePendingCount();
+                      }
+                    } catch (e) {
+                      if (context.mounted) {
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('❌ Download failed: $e'), backgroundColor: Colors.red),
+                        );
+                      }
+                    }
+                  },
+                ),
+              ],
             ),
+            const SizedBox(height: 32),
           ],
         ),
       ),
@@ -270,55 +293,58 @@ class _MenuCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(20),
-          child: Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: Colors.white.withOpacity(0.05)),
-              color: Colors.white.withOpacity(0.03),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: color.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: Icon(icon, size: 28, color: color),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(24),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+          decoration: BoxDecoration(
+            color: const Color(0xFF1F2937), // Card background
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: Colors.white.withOpacity(0.05)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.2),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(20),
                 ),
-                const SizedBox(width: 20),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      if (subtitle != null) ...[
-                        const SizedBox(height: 2),
-                        Text(
-                          subtitle!,
-                          style: TextStyle(color: Colors.grey[500], fontSize: 13),
-                        ),
-                      ],
-                    ],
+                child: Icon(icon, size: 32, color: color),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              if (subtitle != null) ...[
+                const SizedBox(height: 6),
+                Text(
+                  subtitle!,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.grey[500],
+                    fontSize: 11,
                   ),
                 ),
-                Icon(Icons.chevron_right, color: Colors.grey[600]),
               ],
-            ),
+            ],
           ),
         ),
       ),
