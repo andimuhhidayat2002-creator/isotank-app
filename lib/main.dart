@@ -35,6 +35,8 @@ class MyApp extends StatelessWidget {
         title: 'Isotank Inspection System',
         debugShowCheckedModeBanner: false,
         theme: KayanTheme.darkTheme,
+        darkTheme: KayanTheme.darkTheme,
+        themeMode: ThemeMode.dark,
         home: const AuthWrapper(),
       ),
     );

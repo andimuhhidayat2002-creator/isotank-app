@@ -19,8 +19,9 @@ class HomeScreen extends StatelessWidget {
       return const InspectorDashboard();
     }
     
+    // Unified Dashboard: Direct Maintenance users to InspectorDashboard
     if (normalizedRole == 'maintenance') {
-      return const MaintenanceDashboard();
+      return const InspectorDashboard();
     }
 
     if (normalizedRole == 'receiver') {
@@ -31,7 +32,12 @@ class HomeScreen extends StatelessWidget {
       return const AdminDashboard();
     }
     
-    // Placeholder for other roles
+    // FALLBACK: If role is unknown, default to InspectorDashboard
+    // This prevents users from being stuck on a blank screen
+    return const InspectorDashboard();
+    
+    /* Placeholder removed to ensure login always succeeds */
+    /*
     return Scaffold(
       appBar: AppBar(
         title: const Text('Isotank System'),
