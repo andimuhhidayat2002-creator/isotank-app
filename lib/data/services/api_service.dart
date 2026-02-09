@@ -20,8 +20,8 @@ class ApiService {
   
   // Production VPS Server
   String get _baseUrl {
-    // Use production server for all platforms
-    return 'http://202.10.44.146/api';
+    // Use production server for all platforms (HTTPS domain)
+    return 'https://kayanconect.com/api';
   }
 
   ApiService._internal() {
