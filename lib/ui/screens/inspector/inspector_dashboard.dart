@@ -6,7 +6,10 @@ import '../../../logic/providers/auth_provider.dart';
 import 'dart:async';
 import '../../../data/services/connectivity_service.dart';
 import 'inspector_jobs_screen.dart';
+import 'incoming_inspections_screen.dart';
+import 'outgoing_inspections_screen.dart';
 import 'yard_search_screen.dart';
+import 'isotank_lookup_screen.dart';
 import '../maintenance/maintenance_dashboard.dart';
 
 class InspectorDashboard extends StatefulWidget {
@@ -156,12 +159,13 @@ class _InspectorDashboardState extends State<InspectorDashboard> {
             // Menu Cards
             _MenuCard(
               title: 'Isotank Lookup',
+              subtitle: 'Search isotank details',
               icon: Icons.manage_search,
               color: const Color(0xFF3B82F6), // Blue
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const YardMapScreen()),
+                  MaterialPageRoute(builder: (context) => const IsotankLookupScreen()),
                 );
               },
             ),
@@ -173,7 +177,7 @@ class _InspectorDashboardState extends State<InspectorDashboard> {
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const InspectorJobsScreen()),
+                  MaterialPageRoute(builder: (context) => const IncomingInspectionsScreen()),
                 ).then((_) => _updatePendingCount());
               },
             ),
@@ -185,7 +189,7 @@ class _InspectorDashboardState extends State<InspectorDashboard> {
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const InspectorJobsScreen()),
+                  MaterialPageRoute(builder: (context) => const OutgoingInspectionsScreen()),
                 ).then((_) => _updatePendingCount());
               },
             ),
