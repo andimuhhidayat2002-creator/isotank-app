@@ -1,6 +1,5 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:dio/dio.dart';
 import '../../data/services/api_service.dart';
 
 class AuthProvider with ChangeNotifier {
@@ -28,7 +27,6 @@ class AuthProvider with ChangeNotifier {
     
     if (_token != null) {
       _isAuthenticated = true;
-      // Setup default headers
       _apiService.setToken(_token!);
     }
     notifyListeners();
@@ -41,33 +39,52 @@ class AuthProvider with ChangeNotifier {
     try {
       final response = await _apiService.login(email, password);
       
-      if (response['success']) {
-        _token = response['token']; // Sanctum returns plain text token
-        _user = response['user']; // User data is in 'user' key, not 'data'
-        _role = response['user']['role']; // Get role from user object
+      if (kDebugMode) {
+        print('📡 Login Response: $response');
+      }
+
+      final bool isSuccess = response['success'] == true || 
+                             response['status'] == 'success' || 
+                             response['status'] == true;
+      
+      if (isSuccess) {
+        _token = response['token'] ?? response['data']?['token'];
+        
+        // Robust user data extraction
+        final userData = response['user'] ?? 
+                        response['data']?['user'] ?? 
+                        response['data'];
+        
+        _user = userData is Map<String, dynamic> ? userData : null;
+        
+        // Robust role extraction
+        _role = userData?['role']?.toString() ?? 
+                response['role']?.toString() ?? 
+                response['data']?['role']?.toString();
         
         if (kDebugMode) {
           print('🎉 Login successful!');
-          print('👤 User: ${_user?['name']} (${_user?['email']})');
+          print('👤 User: ${_user?['name']}');
           print('🔑 Role: $_role');
-          print('🎫 Token: ${_token?.substring(0, 20)}...');
         }
         
-        // Save to prefs
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('token', _token!);
-        await prefs.setString('role', _role!);
+        if (_token != null) {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('token', _token!);
+          if (_role != null) {
+            await prefs.setString('role', _role!);
+          }
+          
+          _apiService.setToken(_token!);
+          _isAuthenticated = true;
+        }
         
-        if (kDebugMode) print('💾 Token saved to SharedPreferences');
-        
-        _apiService.setToken(_token!);
-        _isAuthenticated = true;
         _isLoading = false;
         notifyListeners();
         return true;
       }
     } catch (e) {
-      if (kDebugMode) print('Login Error: $e');
+      if (kDebugMode) print('❌ Login Error: $e');
     }
 
     _isLoading = false;
@@ -79,7 +96,7 @@ class AuthProvider with ChangeNotifier {
     try {
       await _apiService.logout();
     } catch (e) {
-      // Ignore network errors on logout
+      // Ignore
     }
 
     _token = null;

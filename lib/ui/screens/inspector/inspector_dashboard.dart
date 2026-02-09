@@ -7,9 +7,7 @@ import 'dart:async';
 import '../../../data/services/connectivity_service.dart';
 import 'inspector_jobs_screen.dart';
 import 'yard_search_screen.dart';
-import 'isotank_search_screen.dart';
 import '../maintenance/maintenance_dashboard.dart';
-import '../../widgets/kayan_widgets.dart';
 
 class InspectorDashboard extends StatefulWidget {
   const InspectorDashboard({super.key});
@@ -159,18 +157,31 @@ class _InspectorDashboardState extends State<InspectorDashboard> {
             _MenuCard(
               title: 'Isotank Lookup',
               icon: Icons.manage_search,
-              color: const Color(0xFF3B82F6),
+              color: const Color(0xFF3B82F6), // Blue
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const IsotankSearchScreen()),
+                  MaterialPageRoute(builder: (context) => const YardMapScreen()),
                 );
               },
             ),
             _MenuCard(
-              title: 'My Inspections',
-              icon: Icons.assignment,
+              title: 'Incoming Inspections',
+              subtitle: 'Check in newly arrived tanks',
+              icon: Icons.login_rounded,
               color: const Color(0xFF10B981),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const InspectorJobsScreen()),
+                ).then((_) => _updatePendingCount());
+              },
+            ),
+            _MenuCard(
+              title: 'Outgoing Inspections',
+              subtitle: 'Final check before dispatch',
+              icon: Icons.logout_rounded,
+              color: const Color(0xFFF59E0B),
               onTap: () {
                 Navigator.push(
                   context,
@@ -182,7 +193,7 @@ class _InspectorDashboardState extends State<InspectorDashboard> {
               title: 'Maintenance',
               subtitle: 'Jobs, Vacuum, Calibration',
               icon: Icons.handyman,
-              color: const Color(0xFFF59E0B),
+              color: const Color(0xFF8B5CF6), // Violet
               onTap: () {
                 Navigator.push(
                   context,

@@ -7,6 +7,8 @@ import 'ui/screens/home_screen.dart';
 import 'data/services/connectivity_service.dart';
 import 'data/services/sync_service.dart';
 
+import 'ui/theme/kayan_theme.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
@@ -32,23 +34,7 @@ class MyApp extends StatelessWidget {
       child: MaterialApp(
         title: 'Isotank Inspection System',
         debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: const Color(0xFF0D47A1), // Professional Blue
-            primary: const Color(0xFF0D47A1),
-            secondary: const Color(0xFF1976D2),
-            surface: Colors.white,
-          ),
-          useMaterial3: true,
-          textTheme: GoogleFonts.interTextTheme(),
-          inputDecorationTheme: InputDecorationTheme(
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-            filled: true,
-            fillColor: Colors.grey[50],
-          ),
-        ),
+        theme: KayanTheme.darkTheme,
         home: const AuthWrapper(),
       ),
     );

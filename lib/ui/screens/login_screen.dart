@@ -30,33 +30,57 @@ class _LoginScreenState extends State<LoginScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Icon(
-                    Icons.storage_rounded,
-                    size: 80,
-                    color: Color(0xFF0D47A1),
+                  Image.asset(
+                    'assets/images/logo_ims.jpg',
+                    height: 120,
+                    fit: BoxFit.contain,
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 24),
+                  // Connection Mode Indicator
+                  Container(
+                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.05),
+                      borderRadius: BorderRadius.circular(30),
+                      border: Border.all(color: Colors.white.withOpacity(0.1)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.wifi, size: 16, color: Colors.green),
+                        const SizedBox(width: 8),
+                        Text(
+                          'ONLINE Mode',
+                          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                            color: Colors.green,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
                   Text(
-                    'Isotank Inspection',
+                    'Operations System',
                     textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                           fontWeight: FontWeight.bold,
-                          color: const Color(0xFF0D47A1),
                         ),
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Single Source of Truth',
+                    'Isotank Management Console',
                     textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: Colors.grey[600],
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Colors.grey[400],
                         ),
                   ),
                   const SizedBox(height: 48),
                   TextFormField(
                     controller: _emailController,
                     decoration: const InputDecoration(
-                      labelText: 'Email',
+                      labelText: 'Email Address',
                       prefixIcon: Icon(Icons.email_outlined),
                     ),
                     validator: (value) {
@@ -71,7 +95,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     controller: _passwordController,
                     obscureText: true,
                     decoration: const InputDecoration(
-                      labelText: 'Password',
+                      labelText: 'Security Password',
                       prefixIcon: Icon(Icons.lock_outline),
                     ),
                     validator: (value) {
@@ -81,8 +105,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       return null;
                     },
                   ),
-                  const SizedBox(height: 24),
-                  FilledButton(
+                  const SizedBox(height: 32),
+                  ElevatedButton(
                     onPressed: authProvider.isLoading
                         ? null
                         : () async {
@@ -95,17 +119,13 @@ class _LoginScreenState extends State<LoginScreen> {
                               if (!success && mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
-                                    content: Text('Login failed. Please check credentials.'),
+                                    content: Text('Authentication failed. Check credentials.'),
                                     backgroundColor: Colors.red,
                                   ),
                                 );
                               }
                             }
                           },
-                    style: FilledButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      backgroundColor: const Color(0xFF0D47A1),
-                    ),
                     child: authProvider.isLoading
                         ? const SizedBox(
                             height: 20,
@@ -115,7 +135,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               color: Colors.white,
                             ),
                           )
-                        : const Text('Login'),
+                        : const Text('SIGN IN'),
                   ),
                 ],
               ),

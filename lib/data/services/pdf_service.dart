@@ -12,7 +12,7 @@ class PdfService {
     // Load header image
     Uint8List? headerImage;
     try {
-      final ByteData headerBytes = await rootBundle.load('assets/images/header_kln.png');
+      final ByteData headerBytes = await rootBundle.load('assets/images/logo_ims.jpg');
       headerImage = headerBytes.buffer.asUint8List();
     } catch (e) {
       print('Error loading header image: $e');
@@ -222,7 +222,7 @@ class PdfService {
     // Load header image
     Uint8List? headerImage;
     try {
-      final ByteData headerBytes = await rootBundle.load('assets/images/header_kln.png');
+      final ByteData headerBytes = await rootBundle.load('assets/images/logo_ims.jpg');
       headerImage = headerBytes.buffer.asUint8List();
     } catch (e) {try{final ByteData fallback = await rootBundle.load('assets/images/header_logo.png');headerImage = fallback.buffer.asUint8List();}catch(_){}}
 

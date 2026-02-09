@@ -13,20 +13,21 @@ class HomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
     final role = authProvider.role;
+    final normalizedRole = role?.toLowerCase() ?? '';
 
-    if (role == 'inspector') {
+    if (normalizedRole == 'inspector') {
       return const InspectorDashboard();
     }
     
-    if (role == 'maintenance') {
+    if (normalizedRole == 'maintenance') {
       return const MaintenanceDashboard();
     }
 
-    if (role == 'receiver') {
+    if (normalizedRole == 'receiver') {
       return const ReceiverDashboard();
     }
 
-    if (role == 'admin' || role == 'management') {
+    if (normalizedRole == 'admin' || normalizedRole == 'management') {
       return const AdminDashboard();
     }
     
