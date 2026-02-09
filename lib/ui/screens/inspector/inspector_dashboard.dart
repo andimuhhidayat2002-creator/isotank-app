@@ -5,8 +5,11 @@ import '../../../data/services/sync_service.dart';
 import '../../../logic/providers/auth_provider.dart';
 import 'dart:async';
 import '../../../data/services/connectivity_service.dart';
-import 'inspector_jobs_screen.dart'; // We will move the jobs list here
-import 'yard_search_screen.dart';   // We will create this
+import 'inspector_jobs_screen.dart';
+import 'yard_search_screen.dart';
+import 'isotank_search_screen.dart';
+import '../maintenance/maintenance_dashboard.dart';
+import '../../widgets/kayan_widgets.dart';
 
 class InspectorDashboard extends StatefulWidget {
   const InspectorDashboard({super.key});
@@ -28,17 +31,13 @@ class _InspectorDashboardState extends State<InspectorDashboard> {
     _isOnline = _connectivityService.isOnline;
     _updatePendingCount();
     
-    // Listen to connection changes
     _connectionSubscription = _connectivityService.connectionStatus.listen((isOnline) {
       if (mounted) {
         setState(() => _isOnline = isOnline);
-        if (isOnline) {
-          _performAutoSync();
-        }
+        if (isOnline) _performAutoSync();
       }
     });
 
-    // Initial check (if already online, maybe sync pending)
     if (_isOnline) {
       _performAutoSync();
     }
@@ -67,138 +66,170 @@ class _InspectorDashboardState extends State<InspectorDashboard> {
       await _syncService.syncPendingData();
       await _updatePendingCount();
       
-      if (mounted) {
-        if (_pendingCount == 0) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('✅ Data synced successfully!'), backgroundColor: Colors.green),
-          );
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('⚠️ Sync incomplete. $_pendingCount items remaining.'), backgroundColor: Colors.orange),
-          );
-        }
+      if (mounted && _pendingCount == 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('✅ Data synced successfully!'), backgroundColor: Colors.green),
+        );
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final userName = authProvider.user?['name'] ?? 'Team';
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Inspector Dashboard'),
-        centerTitle: true,
+        title: const Text('Operations Dashboard'),
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
-            onPressed: () => Provider.of<AuthProvider>(context, listen: false).logout(),
+            onPressed: () => authProvider.logout(),
           ),
         ],
       ),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Colors.blue.shade50, Colors.white],
-          ),
-        ),
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Status Card
-            Card(
-              color: _isOnline ? Colors.green[50] : Colors.red[50],
-              child: Padding(
-                padding: const EdgeInsets.all(12.0),
-                child: Row(
-                  children: [
-                    Icon(_isOnline ? Icons.wifi : Icons.wifi_off, 
-                         color: _isOnline ? Colors.green : Colors.red),
-                    const SizedBox(width: 12),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(_isOnline ? 'ONLINE Mode' : 'OFFLINE Mode', 
-                             style: const TextStyle(fontWeight: FontWeight.bold)),
-                        Text(_pendingCount > 0 ? '$_pendingCount items pending sync' : 'All data synced',
-                             style: TextStyle(color: _pendingCount > 0 ? Colors.orange : Colors.grey[700], fontSize: 12)),
-                      ],
-                    ),
-                    const Spacer(),
-                    if (_pendingCount > 0 && _isOnline)
-                      IconButton(
-                        icon: const Icon(Icons.sync, color: Colors.blue),
-                        onPressed: _performAutoSync,
-                        tooltip: 'Sync Now',
-                      ),
-                  ],
+            // Status Card - Premium Look
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: _isOnline ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: _isOnline ? Colors.green.withOpacity(0.3) : Colors.red.withOpacity(0.3),
                 ),
               ),
-            ),
-            const SizedBox(height: 24),
-            
-            Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+              child: Row(
                 children: [
-                  _MenuCard(
-                    title: 'My Inspections',
-                    icon: Icons.assignment,
-                    color: Colors.blue.shade700,
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => const InspectorJobsScreen()),
-                      ).then((_) => _updatePendingCount());
-                    },
+                  Icon(
+                    _isOnline ? Icons.wifi : Icons.wifi_off, 
+                    color: _isOnline ? Colors.green : Colors.red,
+                    size: 28,
                   ),
-                  const SizedBox(height: 24),
-                  _MenuCard(
-                    title: 'Yard Positioning',
-                    icon: Icons.map,
-                    color: Colors.orange.shade700,
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => const YardMapScreen()),
-                      );
-                    },
+                  const SizedBox(width: 16),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _isOnline ? 'ONLINE Mode' : 'OFFLINE Mode',
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                      ),
+                      Text(
+                        _pendingCount > 0 ? '$_pendingCount items pending sync' : 'All data synced',
+                        style: TextStyle(
+                          color: _pendingCount > 0 ? Colors.orange : Colors.grey[400],
+                          fontSize: 14
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 24),
-                  _MenuCard(
-                    title: 'Download Offline Data',
-                    icon: Icons.download_for_offline, // Changed icon
-                    color: Colors.green.shade700,
-                    onTap: () async {
-                      // Show loading indicator
-                      showDialog(
-                        context: context,
-                        barrierDismissible: false,
-                        builder: (ctx) => const Center(child: CircularProgressIndicator()),
-                      );
-                      
-                      try {
-                        await _syncService.downloadOfflineData();
-                        if (context.mounted) {
-                          Navigator.pop(context); // Close loading
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('✅ Data downloaded for offline use!'), backgroundColor: Colors.green),
-                          );
-                          _updatePendingCount();
-                        }
-                      } catch (e) {
-                        if (context.mounted) {
-                          Navigator.pop(context); // Close loading
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('❌ Sync failed: $e'), backgroundColor: Colors.red),
-                          );
-                        }
-                      }
-                    },
-                  ),
+                  const Spacer(),
+                  if (_pendingCount > 0 && _isOnline)
+                    IconButton(
+                      icon: const Icon(Icons.sync, color: Colors.blue),
+                      onPressed: _performAutoSync,
+                    ),
                 ],
               ),
+            ),
+            
+            const SizedBox(height: 24),
+            
+            Text(
+              'Welcome Back, $userName',
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+                letterSpacing: -0.5,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Select an operation category to begin.',
+              style: TextStyle(color: Colors.grey, fontSize: 15),
+            ),
+            
+            const SizedBox(height: 24),
+            
+            // Menu Cards
+            _MenuCard(
+              title: 'Isotank Lookup',
+              icon: Icons.manage_search,
+              color: const Color(0xFF3B82F6),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const IsotankSearchScreen()),
+                );
+              },
+            ),
+            _MenuCard(
+              title: 'My Inspections',
+              icon: Icons.assignment,
+              color: const Color(0xFF10B981),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const InspectorJobsScreen()),
+                ).then((_) => _updatePendingCount());
+              },
+            ),
+            _MenuCard(
+              title: 'Maintenance',
+              subtitle: 'Jobs, Vacuum, Calibration',
+              icon: Icons.handyman,
+              color: const Color(0xFFF59E0B),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const MaintenanceDashboard()),
+                );
+              },
+            ),
+            _MenuCard(
+              title: 'Yard Positioning',
+              icon: Icons.map,
+              color: const Color(0xFFEF4444),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const YardMapScreen()),
+                );
+              },
+            ),
+            _MenuCard(
+              title: 'Download Offline Data',
+              icon: Icons.download_for_offline,
+              color: const Color(0xFF6366F1),
+              onTap: () async {
+                showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (ctx) => const Center(child: CircularProgressIndicator()),
+                );
+                
+                try {
+                  await _syncService.downloadOfflineData();
+                  if (context.mounted) {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('✅ Offline data updated successfully!'), backgroundColor: Colors.green),
+                    );
+                    _updatePendingCount();
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('❌ Download failed: $e'), backgroundColor: Colors.red),
+                    );
+                  }
+                }
+              },
             ),
           ],
         ),
@@ -209,12 +240,14 @@ class _InspectorDashboardState extends State<InspectorDashboard> {
 
 class _MenuCard extends StatelessWidget {
   final String title;
+  final String? subtitle;
   final IconData icon;
   final Color color;
   final VoidCallback onTap;
 
   const _MenuCard({
     required this.title,
+    this.subtitle,
     required this.icon,
     required this.color,
     required this.onTap,
@@ -222,30 +255,55 @@ class _MenuCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          padding: const EdgeInsets.all(24), // Reduced padding slightly
-          child: Row( // Changed to Row for better look on wide screens or just stylistic
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, size: 48, color: color),
-              const SizedBox(width: 24),
-              Expanded( // Prevent overflow
-                child: Text(
-                  title,
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.grey[800],
-                        fontSize: 20,
-                      ),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(20),
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: Colors.white.withOpacity(0.05)),
+              color: Colors.white.withOpacity(0.03),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Icon(icon, size: 28, color: color),
                 ),
-              ),
-            ],
+                const SizedBox(width: 20),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      if (subtitle != null) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          subtitle!,
+                          style: TextStyle(color: Colors.grey[500], fontSize: 13),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                Icon(Icons.chevron_right, color: Colors.grey[600]),
+              ],
+            ),
           ),
         ),
       ),
