@@ -81,7 +81,7 @@ class _InspectorDashboardState extends State<InspectorDashboard> {
     final userName = authProvider.user?['name'] ?? 'Team';
 
     return Scaffold(
-      backgroundColor: const Color(0xFF111827), // Deep Dark Background
+      backgroundColor: const Color(0xFF111827),
       appBar: AppBar(
         title: const Text('Operations Dashboard'),
         backgroundColor: Colors.transparent,
@@ -93,184 +93,202 @@ class _InspectorDashboardState extends State<InspectorDashboard> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 8),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Status Card - Premium Look (Matching Image)
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: _isOnline ? const Color(0xFF064E3B).withOpacity(0.3) : const Color(0xFF7F1D1D).withOpacity(0.3),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: _isOnline ? const Color(0xFF10B981).withOpacity(0.2) : const Color(0xFFEF4444).withOpacity(0.2),
-                ),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    _isOnline ? Icons.wifi_tethering : Icons.wifi_tethering_off, 
-                    color: _isOnline ? const Color(0xFF10B981) : const Color(0xFFEF4444),
-                    size: 28,
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          _isOnline ? 'ONLINE Mode' : 'OFFLINE Mode',
-                          style: TextStyle(
-                            color: _isOnline ? const Color(0xFFD1FAE5) : const Color(0xFFFEE2E2),
-                            fontWeight: FontWeight.bold, 
-                            fontSize: 16
-                          ),
-                        ),
-                        Text(
-                          _pendingCount > 0 ? '$_pendingCount items pending sync' : 'All data synced',
-                          style: TextStyle(
-                            color: _isOnline ? const Color(0xFF10B981).withOpacity(0.8) : const Color(0xFFEF4444).withOpacity(0.8),
-                            fontSize: 13
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  if (_pendingCount > 0 && _isOnline)
-                    IconButton(
-                      icon: const Icon(Icons.sync, color: Colors.blue),
-                      onPressed: _performAutoSync,
-                    ),
-                ],
-              ),
-            ),
-            
-            const SizedBox(height: 28),
-            
-            Text(
-              'Welcome Back, $userName',
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                letterSpacing: -0.5,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Select an operation category to begin.',
-              style: TextStyle(color: Colors.grey[400], fontSize: 14),
-            ),
-            
-            const SizedBox(height: 28),
-            
-            // Grid Menu
-            GridView.count(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisCount: 2,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-              childAspectRatio: 0.85,
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          // Status Card (~90) + Welcome (~80) + Padding (~60)
+          const double headerHeight = 260;
+          final double availableHeight = constraints.maxHeight - headerHeight;
+          
+          // We have 3 rows
+          final double cardHeight = (availableHeight / 3) - 16; // 16 for mainAxisSpacing
+          final double cardWidth = (constraints.maxWidth - 40 - 16) / 2; // horizontal padding 20*2, spacing 16
+          
+          // Ensure ratio is reasonable (limit to avoid too stretched/squashed)
+          double ratio = cardWidth / cardHeight;
+          if (ratio < 0.7) ratio = 0.7;
+          if (ratio > 1.3) ratio = 1.3;
+
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _MenuCard(
-                  title: 'Isotank Lookup',
-                  subtitle: 'Search isotank details',
-                  icon: Icons.search,
-                  color: const Color(0xFF3B82F6), // Blue
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const IsotankLookupScreen()),
-                    );
-                  },
+                // Status Card
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                  decoration: BoxDecoration(
+                    color: _isOnline ? const Color(0xFF064E3B).withOpacity(0.3) : const Color(0xFF7F1D1D).withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: _isOnline ? const Color(0xFF10B981).withOpacity(0.2) : const Color(0xFFEF4444).withOpacity(0.2),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        _isOnline ? Icons.wifi_tethering : Icons.wifi_tethering_off, 
+                        color: _isOnline ? const Color(0xFF10B981) : const Color(0xFFEF4444),
+                        size: 24,
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _isOnline ? 'ONLINE Mode' : 'OFFLINE Mode',
+                              style: TextStyle(
+                                color: _isOnline ? const Color(0xFFD1FAE5) : const Color(0xFFFEE2E2),
+                                fontWeight: FontWeight.bold, 
+                                fontSize: 15
+                              ),
+                            ),
+                            Text(
+                              _pendingCount > 0 ? '$_pendingCount items pending sync' : 'All data synced',
+                              style: TextStyle(
+                                color: _isOnline ? const Color(0xFF10B981).withOpacity(0.8) : const Color(0xFFEF4444).withOpacity(0.8),
+                                fontSize: 12
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (_pendingCount > 0 && _isOnline)
+                        IconButton(
+                          icon: const Icon(Icons.sync, color: Colors.blue, size: 20),
+                          onPressed: _performAutoSync,
+                        ),
+                    ],
+                  ),
                 ),
-                _MenuCard(
-                  title: 'Incoming Inspections',
-                  subtitle: 'Check in newly arrived tanks',
-                  icon: Icons.login_rounded,
-                  color: const Color(0xFF10B981), // Green
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const IncomingInspectionsScreen()),
-                    ).then((_) => _updatePendingCount());
-                  },
+                
+                const SizedBox(height: 20),
+                
+                Text(
+                  'Welcome Back, $userName',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: -0.5,
+                  ),
                 ),
-                _MenuCard(
-                  title: 'Outgoing Inspections',
-                  subtitle: 'Final check before dispatch',
-                  icon: Icons.logout_rounded,
-                  color: const Color(0xFFF59E0B), // Amber
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const OutgoingInspectionsScreen()),
-                    ).then((_) => _updatePendingCount());
-                  },
+                const SizedBox(height: 4),
+                Text(
+                  'Select an operation category to begin.',
+                  style: TextStyle(color: Colors.grey[400], fontSize: 13),
                 ),
-                _MenuCard(
-                  title: 'Maintenance',
-                  subtitle: 'Jobs, Vacuum, Calibration',
-                  icon: Icons.handyman_rounded,
-                  color: const Color(0xFF8B5CF6), // Purple
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const MaintenanceDashboard()),
-                    );
-                  },
+                
+                const SizedBox(height: 20),
+                
+                // Grid Menu
+                Expanded(
+                  child: GridView.count(
+                    crossAxisCount: 2,
+                    crossAxisSpacing: 16,
+                    mainAxisSpacing: 16,
+                    childAspectRatio: ratio,
+                    physics: const NeverScrollableScrollPhysics(), // Fit exactly
+                    children: [
+                      _MenuCard(
+                        title: 'Isotank Lookup',
+                        subtitle: 'Search isotank details',
+                        icon: Icons.search,
+                        color: const Color(0xFF3B82F6),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => const IsotankLookupScreen()),
+                          );
+                        },
+                      ),
+                      _MenuCard(
+                        title: 'Incoming Inspections',
+                        subtitle: 'Check in newly arrived tanks',
+                        icon: Icons.login_rounded,
+                        color: const Color(0xFF10B981),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => const IncomingInspectionsScreen()),
+                          ).then((_) => _updatePendingCount());
+                        },
+                      ),
+                      _MenuCard(
+                        title: 'Outgoing Inspections',
+                        subtitle: 'Final check before dispatch',
+                        icon: Icons.logout_rounded,
+                        color: const Color(0xFFF59E0B),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => const OutgoingInspectionsScreen()),
+                          ).then((_) => _updatePendingCount());
+                        },
+                      ),
+                      _MenuCard(
+                        title: 'Maintenance',
+                        subtitle: 'Jobs, Vacuum, Calibration',
+                        icon: Icons.handyman_rounded,
+                        color: const Color(0xFF8B5CF6),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => const MaintenanceDashboard()),
+                          );
+                        },
+                      ),
+                      _MenuCard(
+                        title: 'Yard Positioning',
+                        subtitle: 'Real-time yard layout',
+                        icon: Icons.map_rounded,
+                        color: const Color(0xFFEF4444),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => const YardMapScreen()),
+                          );
+                        },
+                      ),
+                      _MenuCard(
+                        title: 'Download Offline Data',
+                        subtitle: 'Offline support',
+                        icon: Icons.download_for_offline_rounded,
+                        color: const Color(0xFF6366F1),
+                        onTap: () async {
+                          showDialog(
+                            context: context,
+                            barrierDismissible: false,
+                            builder: (ctx) => const Center(child: CircularProgressIndicator()),
+                          );
+                          
+                          try {
+                            await _syncService.downloadOfflineData();
+                            if (context.mounted) {
+                              Navigator.pop(context);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('✅ Offline data updated successfully!'), backgroundColor: Colors.green),
+                              );
+                              _updatePendingCount();
+                            }
+                          } catch (e) {
+                            if (context.mounted) {
+                              Navigator.pop(context);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('❌ Download failed: $e'), backgroundColor: Colors.red),
+                              );
+                            }
+                          }
+                        },
+                      ),
+                    ],
+                  ),
                 ),
-                _MenuCard(
-                  title: 'Yard Positioning',
-                  subtitle: 'Real-time yard layout',
-                  icon: Icons.map_rounded,
-                  color: const Color(0xFFEF4444), // Red
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const YardMapScreen()),
-                    );
-                  },
-                ),
-                _MenuCard(
-                  title: 'Download Offline Data',
-                  subtitle: 'Offline support',
-                  icon: Icons.download_for_offline_rounded,
-                  color: const Color(0xFF6366F1), // Indigo
-                  onTap: () async {
-                    showDialog(
-                      context: context,
-                      barrierDismissible: false,
-                      builder: (ctx) => const Center(child: CircularProgressIndicator()),
-                    );
-                    
-                    try {
-                      await _syncService.downloadOfflineData();
-                      if (context.mounted) {
-                        Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('✅ Offline data updated successfully!'), backgroundColor: Colors.green),
-                        );
-                        _updatePendingCount();
-                      }
-                    } catch (e) {
-                      if (context.mounted) {
-                        Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('❌ Download failed: $e'), backgroundColor: Colors.red),
-                        );
-                      }
-                    }
-                  },
-                ),
+                const SizedBox(height: 16),
               ],
             ),
-            const SizedBox(height: 32),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
