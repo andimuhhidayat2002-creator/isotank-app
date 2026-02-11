@@ -676,14 +676,19 @@ class ApiService {
   }
 
   // Inspection Items Method
-  Future<List<dynamic>> getInspectionItems() async {
+  Future<List<dynamic>> getInspectionItems({String? tankCategory}) async {
     try {
       // Try to fetch from server
-      final response = await _dio.get('/inspection-items');
+      final response = await _dio.get('/inspection-items', queryParameters: {
+        if (tankCategory != null) 'tank_category': tankCategory,
+      });
       final items = response.data['data'];
       
-      // Cache items for offline use
-      await _db.cacheJob(0, 'inspection_items', {'items': items});
+      // Cache items for offline use - include tankCategory in cache key if possible, 
+      // but the database_helper cacheJob uses (id, type, data).
+      // We can use a special ID or type for different categories if needed.
+      // For now, let's just cache it.
+      await _db.cacheJob(0, 'inspection_items_${tankCategory ?? 'T75'}', {'items': items});
       
       return items;
     } on DioException catch (e) {
@@ -694,13 +699,23 @@ class ApiService {
           !_connectivity.isOnline) {
           
           final db = await _db.database;
-          final results = await db.query('cached_jobs', where: 'id = ? AND type = ?', whereArgs: [0, 'inspection_items']);
+          final cacheType = 'inspection_items_${tankCategory ?? 'T75'}';
+          final results = await db.query('cached_jobs', where: 'id = ? AND type = ?', whereArgs: [0, cacheType]);
           
           if (results.isNotEmpty) {
              final cached = decodeJson(results.first['data'] as String);
              return cached['items'] ?? [];
           }
-          // If no cache, return empty list (or fall back to hardcoded defaults in UI)
+          
+          // Fallback to T75 if specific category not found in cache
+          if (tankCategory != 'T75') {
+            final fallbackResults = await db.query('cached_jobs', where: 'id = ? AND type = ?', whereArgs: [0, 'inspection_items_T75']);
+            if (fallbackResults.isNotEmpty) {
+               final cached = decodeJson(fallbackResults.first['data'] as String);
+               return cached['items'] ?? [];
+            }
+          }
+
           return [];
        }
        throw _handleError(e);

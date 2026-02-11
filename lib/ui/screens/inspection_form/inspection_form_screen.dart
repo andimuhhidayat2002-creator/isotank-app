@@ -140,14 +140,14 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
 
   Future<void> _loadData() async {
     try {
-      // Parallel loading for speed
-      final results = await Future.wait([
-        _apiService.getInspectionJobDetails(widget.jobId),
-        _apiService.getInspectionItems(), 
-      ]);
+      // 1. Fetch Job Details first to know the Tank Category
+      final jobResponse = await _apiService.getInspectionJobDetails(widget.jobId);
+      final data = jobResponse as Map<String, dynamic>;
+      final job = data['job'];
+      final tankCategory = job?['isotank']?['tank_category'] ?? 'T75';
 
-      final data = results[0] as Map<String, dynamic>;
-      final items = results[1] as List<dynamic>;
+      // 2. Fetch Inspection Items filtered by Category
+      final items = await _apiService.getInspectionItems(tankCategory: tankCategory);
 
       setState(() {
         _job = data['job'];
@@ -320,6 +320,8 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
   Widget build(BuildContext context) {
     final activityType = _job?['activity_type'] ?? 'both';
     final isOutgoing = activityType == 'outgoing_inspection';
+    final tankCategory = _job?['isotank']?['tank_category'] ?? 'T75';
+    final isT75 = tankCategory == 'T75';
 
     if (_isLoading) {
        return Scaffold(
@@ -403,7 +405,7 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
                 ),
 
                 // A. Inspection Data
-                _buildSectionHeader('A. Inspection Data'),
+                _buildSectionHeader(isT75 ? 'A. Inspection Data' : 'Inspection Data'),
                 // Automatic Date (Read Only)
                 TextFormField(
                   initialValue: DateTime.now().toLocal().toString().split(' ')[0], // YYYY-MM-DD
@@ -418,24 +420,35 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                // B. General Condition (Dynamic from Database)
-                _buildDynamicSection('b', 'B. General Condition'),
-
-                // C. Valve & Piping (Dynamic from Database)
-                _buildDynamicSection('c', 'C. Valve & Piping'),
+                // B & C or Dynamic Sections
+                if (isT75) ...[
+                  _buildDynamicSection('b', 'B. General Condition'),
+                  _buildDynamicSection('c', 'C. Valve & Piping'),
+                ] else ...[
+                  // Show all dynamic sections for T11/T50
+                  ...(() {
+                    final keys = _groupedItems.keys.toList()..sort();
+                    return keys.map((catKey) {
+                      String title = catKey.toUpperCase();
+                      if (title.length == 1) title = "Section $title";
+                      return _buildDynamicSection(catKey, title);
+                    });
+                  })(),
+                ],
                 
-                // D. IBOX System (Hardcoded - contains complex logic)
-                _buildSectionHeader('D. IBOX System'),
-                _buildConditionButtons('IBOX Condition', 'ibox_condition'),
-                
-                _buildReadingStage('IBOX Temperature (°C)', 'ibox_temperature', 1, isOutgoing),
-                _buildReadingStage('IBOX Temperature (°C)', 'ibox_temperature', 2, isOutgoing),
-                _buildTextField('IBOX Pressure (Bar)', 'pressure', numeric: true),
-                _buildTextField('IBOX Level', 'level', numeric: true),
-                _buildTextField('IBOX Battery %', 'battery_percent', numeric: true),
+                // D. IBOX System (Hardcoded - T75 ONLY)
+                if (isT75) ...[
+                  _buildSectionHeader('D. IBOX System'),
+                  _buildConditionButtons('IBOX Condition', 'ibox_condition'),
+                  _buildReadingStage('IBOX Temperature (°C)', 'ibox_temperature', 1, isOutgoing),
+                  _buildReadingStage('IBOX Temperature (°C)', 'ibox_temperature', 2, isOutgoing),
+                  _buildTextField('IBOX Pressure (Bar)', 'pressure', numeric: true),
+                  _buildTextField('IBOX Level', 'level', numeric: true),
+                  _buildTextField('IBOX Battery %', 'battery_percent', numeric: true),
+                ],
 
                 // E. Instrument (Hardcoded - contains calibration logic)
-                _buildSectionHeader('E. Instrument'),
+                _buildSectionHeader(isT75 ? 'E. Instrument' : 'Instrument & Calibration'),
                 _buildConditionButtons('Pressure Gauge Condition', 'pressure_gauge_condition'),
                 
                 // Calibration Card
@@ -476,61 +489,63 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
                 _buildReadingStage('Level Reading (mm/%)', 'level', 1, isOutgoing),
                 _buildReadingStage('Level Reading (mm/%)', 'level', 2, isOutgoing),
                 
-                // F. Vacuum System (Hardcoded - contains vacuum logic)
-                _buildSectionHeader('F. Vacuum System'),
-                _buildDatePicker('Vacuum Check Datetime', 'vacuum_check_datetime', includeTime: true),
-                Row(
-                  children: [
-                    Expanded(flex: 2, child: _buildTextField('Vacuum Value', 'vacuum_value', numeric: true)),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      flex: 1,
-                      child: DropdownButtonFormField<String>(
-                        decoration: const InputDecoration(labelText: 'Unit'),
-                        value: _formData['vacuum_unit'] ?? 'mtorr',
-                        items: ['mtorr', 'torr', 'scientific'].map((u) => DropdownMenuItem(
-                          value: u, 
-                          child: Text(u.toUpperCase()),
-                        )).toList(),
-                        onChanged: (v) => setState(() => _formData['vacuum_unit'] = v),
+                // F. Vacuum System (Hardcoded - T75 ONLY)
+                if (isT75) ...[
+                  _buildSectionHeader('F. Vacuum System'),
+                  _buildDatePicker('Vacuum Check Datetime', 'vacuum_check_datetime', includeTime: true),
+                  Row(
+                    children: [
+                      Expanded(flex: 2, child: _buildTextField('Vacuum Value', 'vacuum_value', numeric: true)),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        flex: 1,
+                        child: DropdownButtonFormField<String>(
+                          decoration: const InputDecoration(labelText: 'Unit'),
+                          value: _formData['vacuum_unit'] ?? 'mtorr',
+                          items: ['mtorr', 'torr', 'scientific'].map((u) => DropdownMenuItem(
+                            value: u, 
+                            child: Text(u.toUpperCase()),
+                          )).toList(),
+                          onChanged: (v) => setState(() => _formData['vacuum_unit'] = v),
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-                // Vacuum Warning Logic
-                Builder(builder: (ctx) {
-                   double? v = double.tryParse(_formData['vacuum_value']?.toString() ?? '');
-                   String u = _formData['vacuum_unit'] ?? 'mtorr';
-                   double mtorr = (u == 'torr') ? (v ?? 0) * 1000 : (v ?? 0);
-                   if (v != null && mtorr > 8) {
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        padding: const EdgeInsets.all(8),
-                        color: Colors.red[100],
-                        child: Row(
-                           children: [
-                             const Icon(Icons.warning, color: Colors.red),
-                             const SizedBox(width: 8),
-                             Expanded(child: Text("Warning: Vacuum > 8 mTorr! This will trigger a Vacuum Suction Activity.", style: TextStyle(color: Colors.red[900], fontWeight: FontWeight.bold))),
-                           ]
-                        )
-                      );
-                   }
-                   return const SizedBox.shrink();
-                }),
+                    ],
+                  ),
+                  // Vacuum Warning Logic
+                  Builder(builder: (ctx) {
+                    double? v = double.tryParse(_formData['vacuum_value']?.toString() ?? '');
+                    String u = _formData['vacuum_unit'] ?? 'mtorr';
+                    double mtorr = (u == 'torr') ? (v ?? 0) * 1000 : (v ?? 0);
+                    if (v != null && mtorr > 8) {
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          padding: const EdgeInsets.all(8),
+                          color: Colors.red[100],
+                          child: Row(
+                            children: [
+                              const Icon(Icons.warning, color: Colors.red),
+                              const SizedBox(width: 8),
+                              Expanded(child: Text("Warning: Vacuum > 8 mTorr! This will trigger a Vacuum Suction Activity.", style: TextStyle(color: Colors.red[900], fontWeight: FontWeight.bold))),
+                            ]
+                          )
+                        );
+                    }
+                    return const SizedBox.shrink();
+                  }),
 
-                _buildTextField('Vacuum Temp (°C)', 'vacuum_temperature', numeric: true),
-                _buildConditionButtons('Vacuum Gauge Condition', 'vacuum_gauge_condition'),
-                _buildConditionButtons('Vacuum Port Suction Condition', 'vacuum_port_suction_condition'),
+                  _buildTextField('Vacuum Temp (°C)', 'vacuum_temperature', numeric: true),
+                  _buildConditionButtons('Vacuum Gauge Condition', 'vacuum_gauge_condition'),
+                  _buildConditionButtons('Vacuum Port Suction Condition', 'vacuum_port_suction_condition'),
+                ],
                 
                 // G. PSV (Hardcoded - contains calibration logic)
-                _buildSectionHeader('G. PSV'),
+                _buildSectionHeader(isT75 ? 'G. PSV' : 'PSV Details'),
                 _buildPSVSection(1),
                 _buildPSVSection(2),
                 _buildPSVSection(3),
                 _buildPSVSection(4),
 
-                  _buildSectionHeader('H. Filling Status'),
+                  _buildSectionHeader(isT75 ? 'H. Filling Status' : 'Filling Status'),
                   FillingStatusSelector(
                     selectedStatus: _selectedFillingStatus,
                     onChanged: (status) {
