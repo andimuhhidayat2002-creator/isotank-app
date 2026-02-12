@@ -26,10 +26,10 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
   bool _isLoading = true;
   bool _isOnline = true;
 
-  Future<void> _takePhoto(String key) async {
+  Future<void> _pickImage(String key, ImageSource source) async {
     try {
       final XFile? photo = await _picker.pickImage(
-        source: ImageSource.camera,
+        source: source,
         imageQuality: 50, // Optimize size
         maxWidth: 1024,
         maxHeight: 1024,
@@ -39,38 +39,12 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
         String savedPath;
         final isoNumber = _job?['isotank']?['iso_number'] ?? 'UNKNOWN';
 
-        // Check platform using flutter/foundation.dart to be safe, 
-        // but since we imported dart:io, we must be careful.
-        // For this specific 'unsupported operation' error on Platform.operatingSystem,
-        // it usually means we are running on Web code that tries to access dart:io Platform.
-        // We will try to rely on FileManagerService logic, but FileManagerService might be using File().
-        
-        // However, FileManagerService logic likely assumes Mobile.
-        // For WEB, we should probably upload bytes directly or save to a temporary memory spot.
-        // Since FileManagerService.saveInspectionPhoto returns a File object (dart:io), 
-        // that service itself needs fix for Web.
-        
-        // But for now, let's fix THIS call site to avoid crashing if possible, 
-        // or just let FileManagerService handle it if updated.
-        
-        // Actually, to fully fix "Unsupported operation: Platform._operatingSystem",
-        // we need to avoid `File(photo.path)` on Web.
-        
-        // Let's assume FileManagerService is Mobile-only for now and we need to patch THIS widget
-        // to handle web or update FileManagerService.
-        
-        // Since I cannot update FileManagerService at this exact moment in THIS tool call easily without checking it,
-        // I will implement a safe check here.
-        
         bool isWeb = false;
         try {
           if (identical(0, 0.0)) isWeb = true; 
         } catch(_) {}
 
         if (isWeb) {
-             // For WEB: Store XFile directly for upload
-             // ApiService is updated to handle XFile
-             
              setState(() {
                _formData['photo_$key'] = photo; // Store XFile object
              });
@@ -91,9 +65,9 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
         
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
+            const SnackBar(
               content: Text('Photo saved!'),
-              duration: const Duration(seconds: 2),
+              duration: Duration(seconds: 2),
             ),
           );
         }
@@ -105,6 +79,36 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
         );
       }
     }
+  }
+
+  void _showImageSourceActionSheet(String key) {
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) {
+        return SafeArea(
+          child: Wrap(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.photo_library),
+                title: const Text('Photo Gallery'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  _pickImage(key, ImageSource.gallery);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_camera),
+                title: const Text('Camera'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  _pickImage(key, ImageSource.camera);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
   Map<String, dynamic>? _job;
   Map<String, dynamic> _formData = {};
@@ -145,6 +149,7 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
       final data = jobResponse as Map<String, dynamic>;
       final job = data['job'];
       final tankCategory = job?['isotank']?['tank_category'] ?? 'T75';
+      debugPrint('Detected Tank Category: $tankCategory');
 
       // 2. Fetch Inspection Items filtered by Category
       final items = await _apiService.getInspectionItems(tankCategory: tankCategory);
@@ -770,7 +775,10 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
         children: [
           Expanded(child: Text(label)),
           if (val != null) const Icon(Icons.check_circle, color: Colors.green),
-          IconButton(icon: const Icon(Icons.camera_alt), onPressed: () => _takePhoto(key)),
+          IconButton(
+            icon: Icon(val != null ? Icons.photo : Icons.camera_alt), 
+            onPressed: () => _showImageSourceActionSheet(key),
+          ),
         ],
       ),
     );
