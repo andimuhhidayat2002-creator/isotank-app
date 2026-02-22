@@ -3,7 +3,7 @@ class VacuumSuctionEvent {
   final int isotankId;
   final DateTime startTime;
   final String status;
-  final double prePortableVacuum;
+  final String prePortableVacuum;
   final double preIsotankTemp;
   final String startMachineVacuum;
   final String? endMachineVacuum;

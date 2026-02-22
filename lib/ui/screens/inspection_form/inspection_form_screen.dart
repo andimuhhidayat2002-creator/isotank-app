@@ -374,8 +374,8 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
                     padding: const EdgeInsets.all(12),
                     margin: const EdgeInsets.only(bottom: 16),
                     decoration: BoxDecoration(
-                      color: Colors.orange[100],
-                      border: Border.all(color: Colors.orange[400]!),
+                      color: Colors.orange.withOpacity(0.1),
+                      border: Border.all(color: Colors.orange),
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: Column(
@@ -385,13 +385,13 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
                           '⚠️ Open Maintenance Logs:',
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
-                            color: Color(0xFF7A4000), // Dark amber for readability on cream bg
+                            color: Colors.orange, 
                           ),
                         ),
                         const SizedBox(height: 4),
                         ..._openMaintenance.map((m) => Text(
                           '• ${m['description'] ?? '-'}',
-                          style: const TextStyle(color: Color(0xFF5D3000)),
+                          style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.8) ?? Colors.grey[800]),
                         )),
                       ],
                     ),
@@ -893,9 +893,9 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.red[50],
+                  color: Colors.red.withOpacity(0.05),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.red[200]!)
+                  border: Border.all(color: Colors.red.withOpacity(0.5))
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -903,6 +903,10 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
                      const Text('⚠️ Defect Maintenance Trigger:', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
                      const SizedBox(height: 8),
                      _buildTextField('Remark / Description', 'remark_$key'),
+                     _buildTextField('Part Damage (Optional)', 'part_damage_$key'),
+                     _buildTextField('Damage Type (Optional)', 'damage_type_$key'),
+                     _buildTextField('Location (Optional)', 'location_$key'),
+                     const SizedBox(height: 8),
                      _buildPhotoField('Evidence Photo', key),
                   ],
                 ),
