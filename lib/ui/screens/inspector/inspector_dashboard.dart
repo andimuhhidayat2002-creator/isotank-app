@@ -11,6 +11,7 @@ import 'outgoing_inspections_screen.dart';
 import 'yard_search_screen.dart';
 import 'isotank_lookup_screen.dart';
 import '../maintenance/maintenance_dashboard.dart';
+import '../profile/profile_screen.dart';
 
 class InspectorDashboard extends StatefulWidget {
   const InspectorDashboard({super.key});
@@ -87,6 +88,15 @@ class _InspectorDashboardState extends State<InspectorDashboard> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.account_circle_outlined),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const ProfileScreen()),
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () => authProvider.logout(),

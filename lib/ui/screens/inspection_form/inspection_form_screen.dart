@@ -139,6 +139,7 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
 
   List<dynamic> _dynamicItems = [];
   Map<String, List<dynamic>> _groupedItems = {};
+  Map<String, dynamic> _repairData = {}; // Stores instant repair info
 
   // ... (previous code)
 
@@ -195,14 +196,12 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
         }
 
         // Initialize form data with default values
+        // This includes the DEFECT DOMINANCE values from backend:
+        // open maintenance jobs automatically set their source_item to 'not_good'
         final rawDefaults = data['default_values'];
         if (rawDefaults is Map) {
           _formData = Map<String, dynamic>.from(rawDefaults);
-          
-          // ... (rest of mapping logic)
         }
-        
-        // ... (rest of defaults)
 
         _isLoading = false;
       });
@@ -294,6 +293,21 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
 
     try {
       final activityType = _job?['activity_type'] ?? 'both';
+      
+      // Process Repair Data
+      final repairJson = {};
+      _repairData.forEach((key, val) {
+         repairJson[key] = {
+           'sparepart': val['sparepart'],
+           'qty': val['qty'],
+         };
+         if (val['photo_file'] != null) {
+            _formData['photo_repair_$key'] = val['photo_file'];
+         } else if (val['photo'] != null) {
+            _formData['photo_repair_$key'] = val['photo'];
+         }
+      });
+
       final data = {
         ..._formData,
         'job_id': widget.jobId,
@@ -302,6 +316,7 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
         'inspection_date': DateTime.now().toLocal().toString().split(' ')[0], // Ensure YYYY-MM-DD format
         'activity_type': activityType,
         'filled_at': DateTime.now().toIso8601String(),
+        'performed_repairs': jsonEncode(repairJson),
       };
 
       await _apiService.submitInspection(widget.jobId, data);
@@ -358,13 +373,26 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
                     width: double.infinity,
                     padding: const EdgeInsets.all(12),
                     margin: const EdgeInsets.only(bottom: 16),
-                    color: Colors.orange[100],
+                    decoration: BoxDecoration(
+                      color: Colors.orange[100],
+                      border: Border.all(color: Colors.orange[400]!),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('⚠️ Open Maintenance Logs:', style: TextStyle(fontWeight: FontWeight.bold)),
+                        const Text(
+                          '⚠️ Open Maintenance Logs:',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF7A4000), // Dark amber for readability on cream bg
+                          ),
+                        ),
                         const SizedBox(height: 4),
-                        ..._openMaintenance.map((m) => Text('• ${m['description'] ?? '-'}')),
+                        ..._openMaintenance.map((m) => Text(
+                          '• ${m['description'] ?? '-'}',
+                          style: const TextStyle(color: Color(0xFF5D3000)),
+                        )),
                       ],
                     ),
                   ),
@@ -500,7 +528,9 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
                   _buildDatePicker('Vacuum Check Datetime', 'vacuum_check_datetime', includeTime: true),
                   Row(
                     children: [
-                      Expanded(flex: 2, child: _buildTextField('Vacuum Value', 'vacuum_value', numeric: true)),
+                      Expanded(flex: 2, child: _buildTextField('Vacuum Value', 'vacuum_value', numeric: true, onChanged: (v) {
+                        setState(() => _formData['vacuum_check_datetime'] = DateTime.now().toLocal().toString().split('.')[0]);
+                      })),
                       const SizedBox(width: 12),
                       Expanded(
                         flex: 1,
@@ -538,7 +568,9 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
                     return const SizedBox.shrink();
                   }),
 
-                  _buildTextField('Vacuum Temp (°C)', 'vacuum_temperature', numeric: true),
+                  _buildTextField('Vacuum Temp (°C)', 'vacuum_temperature', numeric: true, onChanged: (v) {
+                    setState(() => _formData['vacuum_check_datetime'] = DateTime.now().toLocal().toString().split('.')[0]);
+                  }),
                   _buildConditionButtons('Vacuum Gauge Condition', 'vacuum_gauge_condition'),
                   _buildConditionButtons('Vacuum Port Suction Condition', 'vacuum_port_suction_condition'),
                 ],
@@ -623,19 +655,171 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
     );
   }
 
+  void _showRepairDialog(String key, String label) {
+    final sparepartCtrl = TextEditingController();
+    final qtyCtrl = TextEditingController(text: '1');
+    String? repairPhotoPath;
+    XFile? repairPhotoFile;
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: Text('Quick Repair: $label'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text('Did you perform an instant repair on this item?'),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: sparepartCtrl,
+                      decoration: const InputDecoration(
+                        labelText: 'Sparepart Name (Optional)',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: qtyCtrl,
+                      decoration: const InputDecoration(
+                        labelText: 'Quantity',
+                        border: OutlineInputBorder(),
+                      ),
+                      keyboardType: TextInputType.number,
+                    ),
+                    const SizedBox(height: 16),
+                    // Photo Picker
+                    GestureDetector(
+                      onTap: () async {
+                        final XFile? photo = await _picker.pickImage(
+                          source: ImageSource.camera,
+                          imageQuality: 50,
+                        );
+                        if (photo != null) {
+                           // If Web
+                           bool isWeb = false;
+                           try { if(identical(0, 0.0)) isWeb = true; } catch(_){}
+
+                           if (isWeb) {
+                              setDialogState(() {
+                                repairPhotoFile = photo;
+                                repairPhotoPath = photo.path;
+                              });
+                           } else {
+                              // Save strictly to local storage
+                              final isoNumber = _job?['isotank']?['iso_number'] ?? 'UNKNOWN';
+                              final photoFile = File(photo.path);
+                              final savedFile = await FileManagerService.saveMaintenancePhoto(
+                                photoFile, isoNumber, widget.jobId, suffix: 'repair_$key'
+                              );
+                              setDialogState(() {
+                                repairPhotoPath = savedFile.path;
+                              });
+                           }
+                        }
+                      },
+                      child: Container(
+                        height: 120,
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey),
+                          borderRadius: BorderRadius.circular(8),
+                          color: Colors.grey[100],
+                        ),
+                        child: repairPhotoPath == null 
+                            ? const Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.camera_alt, size: 40, color: Colors.grey),
+                                  Text('Take Repair Photo'),
+                                ],
+                              )
+                            : Image.network( // Works for both web blob and local file if handled correctly by image provider wrapper, but for simplicity:
+                                repairPhotoPath!,
+                                fit: BoxFit.cover,
+                                errorBuilder: (c,e,s) => const Center(child: Icon(Icons.check_circle, size: 40, color: Colors.green)),
+                              ),
+                      ),
+                    ),
+                    if (repairPhotoPath != null)
+                      const Padding(
+                        padding: EdgeInsets.only(top: 8.0),
+                        child: Text('Photo Attached!', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+                      ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    // Canceled/Undo - Revert to Not Good is not strictly necessary, just close dialog
+                    // But here we just close, meaning "No Repair", so it's just a status change.
+                    Navigator.pop(context);
+                  },
+                  child: const Text('No, Undo'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    if (repairPhotoPath == null) {
+                       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Repair photo is required!')));
+                       return;
+                    }
+                    
+                    setState(() {
+                       _repairData[key] = {
+                         'sparepart': sparepartCtrl.text,
+                         'qty': qtyCtrl.text,
+                         'photo': repairPhotoPath, // Path string
+                         'photo_file': repairPhotoFile, // XFile for web
+                       };
+                       _formData[key] = 'good'; // Confirm Good status
+                    });
+                    Navigator.pop(context);
+                  },
+                  child: const Text('Confirm Repair'),
+                ),
+              ],
+            );
+          }
+        );
+      },
+    );
+  }
+
   Widget _buildConditionButtons(String label, String key) {
     final selected = _formData[key];
     final isBad = selected == 'not_good' || selected == 'need_attention';
+    final hasRepair = _repairData.containsKey(key);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 24.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+          Row(
+            children: [
+               Text(label, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+               if (hasRepair) ...[
+                 const SizedBox(width: 8),
+                 Container(
+                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                   decoration: BoxDecoration(color: Colors.green[100], borderRadius: BorderRadius.circular(12)),
+                   child: const Row(
+                     children: [
+                       Icon(Icons.build, size: 14, color: Colors.green),
+                       SizedBox(width: 4),
+                       Text('REPAIRED', style: TextStyle(fontSize: 10, color: Colors.green, fontWeight: FontWeight.bold)),
+                     ],
+                   ),
+                 )
+               ]
+            ],
+          ),
           const SizedBox(height: 8),
           
-          // Proportional Row of Icons
           Container(
             decoration: BoxDecoration(
               border: Border.all(color: Colors.grey[300]!),
@@ -656,7 +840,26 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
                  
                  return Expanded(
                    child: InkWell(
-                     onTap: () => setState(() => _formData[key] = o),
+                     onTap: () {
+                        // Detect Transition Not Good -> Good
+                        if ((_formData[key] == 'not_good' || _formData[key] == 'need_attention') && o == 'good') {
+                             _showRepairDialog(key, label);
+                             // Dialog handles the actual state update if confirmed.
+                             // Wait, logic update: use standard flow until confirmed
+                             setState(() => _formData[key] = o);
+                        } else {
+                             // Normal state change
+                             if (o != 'good') {
+                                // If moving away from good, remove repair data
+                                setState(() {
+                                  _repairData.remove(key);
+                                  _formData[key] = o;
+                                });
+                             } else {
+                                setState(() => _formData[key] = o);
+                             }
+                        }
+                     },
                      child: Container(
                        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
                        decoration: BoxDecoration(
@@ -710,14 +913,19 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
     );
   }
 
-  Widget _buildTextField(String label, String key, {bool numeric = false}) {
+  Widget _buildTextField(String label, String key, {bool numeric = false, Function(String)? onChanged}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12.0),
       child: TextFormField(
         initialValue: _formData[key]?.toString(),
         decoration: InputDecoration(labelText: label, border: const OutlineInputBorder()),
         keyboardType: numeric ? TextInputType.number : TextInputType.text,
-        onChanged: (v) => _formData[key] = v,
+        onChanged: (v) {
+          _formData[key] = v;
+          if (onChanged != null) {
+            onChanged(v);
+          }
+        },
       ),
     );
   }

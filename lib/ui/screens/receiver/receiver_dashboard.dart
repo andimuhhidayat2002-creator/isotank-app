@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../../data/services/api_service.dart';
 import '../../../logic/providers/auth_provider.dart';
 import 'receiver_confirmation_screen.dart';
+import '../profile/profile_screen.dart';
 
 class ReceiverDashboard extends StatefulWidget {
   const ReceiverDashboard({super.key});
@@ -36,6 +37,15 @@ class _ReceiverDashboardState extends State<ReceiverDashboard> {
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _loadJobs,
+          ),
+          IconButton(
+            icon: const Icon(Icons.account_circle_outlined),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const ProfileScreen()),
+              );
+            },
           ),
           IconButton(
             icon: const Icon(Icons.logout),

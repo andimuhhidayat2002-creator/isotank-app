@@ -189,14 +189,54 @@ class _IsotankDetailScreenState extends State<IsotankDetailScreen> {
       itemCount: jobs.length,
       itemBuilder: (context, index) {
         final job = jobs[index];
+        final bool isClosed = job['status'] == 'closed' || job['status'] == 'completed';
+        final openedDate = job['created_at'] != null ? DateFormat('dd MMM yyyy').format(DateTime.parse(job['created_at'])) : '-';
+        final closedDate = (isClosed && job['completed_at'] != null) ? DateFormat('dd MMM yyyy').format(DateTime.parse(job['completed_at'])) : null;
+        final tech = job['completedBy']?['name'] ?? 'System';
+
         return Card(
           color: const Color(0xFF1E293B),
           margin: const EdgeInsets.only(bottom: 12),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          child: ListTile(
-            title: Text(job['source_item'] ?? job['type'] ?? 'Maintenance', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-            subtitle: Text('Status: ${job['status'].toString().toUpperCase()}\nDate: ${job['created_at'] != null ? DateFormat('dd MMM yyyy').format(DateTime.parse(job['created_at'])) : '-'}', style: TextStyle(color: Colors.grey[400])),
-            trailing: _buildStatusBadge(job['status']),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        job['source_item'] ?? job['type'] ?? 'Maintenance',
+                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                      ),
+                    ),
+                    _buildStatusBadge(job['status']),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  job['description'] ?? 'No description provided',
+                  style: TextStyle(color: Colors.grey[400], fontSize: 13),
+                ),
+                const Divider(color: Colors.white12, height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    _buildDateInfo('Opened', openedDate),
+                    if (closedDate != null) _buildDateInfo('Closed', closedDate, isHighlight: true),
+                  ],
+                ),
+                if (isClosed) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    'Technician: $tech',
+                    style: const TextStyle(color: Colors.blueAccent, fontSize: 12, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ],
+            ),
           ),
         );
       },
@@ -431,6 +471,16 @@ class _IsotankDetailScreenState extends State<IsotankDetailScreen> {
       final dt = DateTime.parse(date.toString());
       return dt.isBefore(DateTime.now());
     } catch (_) { return false; }
+  }
+
+  Widget _buildDateInfo(String label, String date, {bool isHighlight = false}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: TextStyle(color: Colors.grey[500], fontSize: 11, fontWeight: FontWeight.bold)),
+        Text(date, style: TextStyle(color: isHighlight ? Colors.greenAccent : Colors.white, fontSize: 13, fontWeight: FontWeight.w500)),
+      ],
+    );
   }
 
   Color _getStatusColor(String code) {

@@ -81,6 +81,20 @@ class ApiService {
     }
   }
 
+  Future<Map<String, dynamic>> uploadSignature(XFile file) async {
+    try {
+      final bytes = await file.readAsBytes();
+      final formData = FormData.fromMap({
+        'signature': MultipartFile.fromBytes(bytes, filename: 'signature.png'),
+      });
+
+      final response = await _dio.post('/me/signature', data: formData);
+      return response.data;
+    } on DioException catch (e) {
+      throw _handleError(e);
+    }
+  }
+
   // Inspector Methods
   Future<List<dynamic>> getInspectorJobs() async {
     try {
