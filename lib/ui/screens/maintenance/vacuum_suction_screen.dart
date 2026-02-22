@@ -30,6 +30,9 @@ class _VacuumSuctionScreenState extends State<VacuumSuctionScreen> {
   final _monitorVacuumCtrl = TextEditingController();
   final _monitorTempCtrl = TextEditingController();
   String _monitorPeriod = 'Morning';
+  String _prePortableUnit = 'mtorr';
+  String _postPortableUnit = 'mtorr';
+  String _monitorVacuumUnit = 'mtorr';
 
   @override
   void initState() {
@@ -73,9 +76,10 @@ class _VacuumSuctionScreenState extends State<VacuumSuctionScreen> {
     try {
       await _vacuumService.startSuction(
         _selectedTankId!, 
-        double.parse(_prePortableCtrl.text),
+        _prePortableCtrl.text,
+        _prePortableUnit,
         double.parse(_preTempCtrl.text),
-        double.parse(_startMachineCtrl.text)
+        _startMachineCtrl.text
       );
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Suction Started!')));
       _checkActiveEvent(_selectedTankId!);
@@ -92,8 +96,9 @@ class _VacuumSuctionScreenState extends State<VacuumSuctionScreen> {
     try {
       await _vacuumService.finishSuction(
         _activeEvent!.id,
-        double.parse(_endMachineCtrl.text),
-        double.parse(_postPortableCtrl.text),
+        _endMachineCtrl.text,
+        _postPortableCtrl.text,
+        _postPortableUnit,
         double.parse(_postTempCtrl.text)
       );
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Suction Finished! Info logged.')));
@@ -111,7 +116,8 @@ class _VacuumSuctionScreenState extends State<VacuumSuctionScreen> {
     try {
       await _vacuumService.addMonitoringLog(
         _activeEvent!.id,
-        double.parse(_monitorVacuumCtrl.text),
+        _monitorVacuumCtrl.text,
+        _monitorVacuumUnit,
         double.parse(_monitorTempCtrl.text),
         _monitorPeriod
       );
@@ -120,6 +126,35 @@ class _VacuumSuctionScreenState extends State<VacuumSuctionScreen> {
       // Clear inputs
       _monitorVacuumCtrl.clear();
       _monitorTempCtrl.clear();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _completeMonitoring() async {
+    if (_activeEvent == null) return;
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Complete Early?'),
+        content: const Text('This will finish the 5-day monitoring phase immediately and save the latest data into the vacuum history logs.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Yes, Complete')),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    setState(() => _isLoading = true);
+    try {
+      await _vacuumService.completeMonitoring(_activeEvent!.id);
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Monitoring Phase Completed!')));
+      _checkActiveEvent(_selectedTankId!);
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
     } finally {
@@ -228,8 +263,20 @@ class _VacuumSuctionScreenState extends State<VacuumSuctionScreen> {
         child: Column(
           children: [
             const Text('Start Suction Event', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 16),
-            TextField(controller: _prePortableCtrl, decoration: const InputDecoration(labelText: 'Portable Vacuum (mTorr)'), keyboardType: TextInputType.number),
+            Row(
+              children: [
+                Expanded(child: TextField(controller: _prePortableCtrl, decoration: const InputDecoration(labelText: 'Portable Vacuum'), keyboardType: TextInputType.text)),
+                const SizedBox(width: 8),
+                DropdownButton<String>(
+                  value: _prePortableUnit,
+                  items: const [
+                    DropdownMenuItem(value: 'mtorr', child: Text('mTorr')),
+                    DropdownMenuItem(value: 'scientific', child: Text('Scientific Torr')),
+                  ],
+                  onChanged: (v) => setState(() => _prePortableUnit = v!),
+                )
+              ],
+            ),
             TextField(controller: _preTempCtrl, decoration: const InputDecoration(labelText: 'Isotank Temp (°C)'), keyboardType: TextInputType.number),
             TextField(controller: _startMachineCtrl, decoration: const InputDecoration(labelText: 'Machine Vacuum Start (Scientific Torr)'), keyboardType: TextInputType.text),
             const SizedBox(height: 20),
@@ -254,7 +301,20 @@ class _VacuumSuctionScreenState extends State<VacuumSuctionScreen> {
             Text('Suction In Progress (Started: ${_activeEvent!.startTime})', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             const SizedBox(height: 16),
             TextField(controller: _endMachineCtrl, decoration: const InputDecoration(labelText: 'Machine Vacuum End (Scientific Torr)'), keyboardType: TextInputType.text),
-            TextField(controller: _postPortableCtrl, decoration: const InputDecoration(labelText: 'Portable Vacuum After (mTorr)'), keyboardType: TextInputType.number),
+            Row(
+              children: [
+                Expanded(child: TextField(controller: _postPortableCtrl, decoration: const InputDecoration(labelText: 'Portable Vacuum After'), keyboardType: TextInputType.text)),
+                const SizedBox(width: 8),
+                DropdownButton<String>(
+                  value: _postPortableUnit,
+                  items: const [
+                    DropdownMenuItem(value: 'mtorr', child: Text('mTorr')),
+                    DropdownMenuItem(value: 'scientific', child: Text('Scientific Torr')),
+                  ],
+                  onChanged: (v) => setState(() => _postPortableUnit = v!),
+                )
+              ],
+            ),
             TextField(controller: _postTempCtrl, decoration: const InputDecoration(labelText: 'Isotank Temp After (°C)'), keyboardType: TextInputType.number),
             const SizedBox(height: 20),
             ElevatedButton(
@@ -286,12 +346,40 @@ class _VacuumSuctionScreenState extends State<VacuumSuctionScreen> {
                   items: ['Morning', 'Evening', 'Extra Day'].map((p) => DropdownMenuItem(value: p, child: Text(p))).toList(),
                   onChanged: (val) => setState(() => _monitorPeriod = val!),
                 ),
-                TextField(controller: _monitorVacuumCtrl, decoration: const InputDecoration(labelText: 'Vacuum (mTorr)'), keyboardType: TextInputType.number),
+                Row(
+                  children: [
+                    Expanded(child: TextField(controller: _monitorVacuumCtrl, decoration: const InputDecoration(labelText: 'Vacuum Value'), keyboardType: TextInputType.text)),
+                    const SizedBox(width: 8),
+                    DropdownButton<String>(
+                      value: _monitorVacuumUnit,
+                      items: const [
+                        DropdownMenuItem(value: 'mtorr', child: Text('mTorr')),
+                        DropdownMenuItem(value: 'scientific', child: Text('Scientific Torr')),
+                      ],
+                      onChanged: (v) => setState(() => _monitorVacuumUnit = v!),
+                    )
+                  ],
+                ),
                 TextField(controller: _monitorTempCtrl, decoration: const InputDecoration(labelText: 'Temperature (°C)'), keyboardType: TextInputType.number),
                 const SizedBox(height: 16),
-                ElevatedButton(
-                  onPressed: _addLog,
-                  child: const Text('Add Log'),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: _addLog,
+                        child: const Text('Add Log'),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: _completeMonitoring,
+                        style: ElevatedButton.styleFrom(backgroundColor: Colors.teal, foregroundColor: Colors.white),
+                        child: const Text('Complete Early'),
+                      ),
+                    ),
+                  ],
                 )
               ],
             ),

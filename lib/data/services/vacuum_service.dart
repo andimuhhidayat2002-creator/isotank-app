@@ -29,11 +29,12 @@ class VacuumService {
     }
   }
 
-  Future<VacuumSuctionEvent> startSuction(int isotankId, double prePortable, double preTemp, double startMachine) async {
+  Future<VacuumSuctionEvent> startSuction(int isotankId, String prePortable, String preUnit, double preTemp, String startMachine) async {
     try {
       final response = await _api.dio.post('/maintenance/vacuum/suction/start', data: {
         'isotank_id': isotankId,
         'pre_portable_vacuum': prePortable,
+        'pre_portable_unit': preUnit,
         'pre_isotank_temp': preTemp,
         'start_machine_vacuum': startMachine
       });
@@ -47,11 +48,12 @@ class VacuumService {
     }
   }
 
-  Future<void> finishSuction(int eventId, double endMachine, double postPortable, double postTemp) async {
+  Future<void> finishSuction(int eventId, String endMachine, String postPortable, String postUnit, double postTemp) async {
     try {
       await _api.dio.post('/maintenance/vacuum/suction/$eventId/finish', data: {
         'end_machine_vacuum': endMachine,
         'post_portable_vacuum': postPortable,
+        'post_portable_unit': postUnit,
         'post_isotank_temp': postTemp
       });
     } catch (e) {
@@ -59,14 +61,23 @@ class VacuumService {
     }
   }
 
-  Future<void> addMonitoringLog(int eventId, double vacuum, double temp, String period) async {
+  Future<void> addMonitoringLog(int eventId, String vacuum, String unit, double temp, String period) async {
     try {
       await _api.dio.post('/maintenance/vacuum/monitoring/add', data: {
         'suction_event_id': eventId,
         'vacuum_value': vacuum,
+        'vacuum_unit': unit,
         'temperature': temp,
         'period': period
       });
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<void> completeMonitoring(int eventId) async {
+    try {
+      await _api.dio.post('/maintenance/vacuum/monitoring/$eventId/complete');
     } catch (e) {
       rethrow;
     }

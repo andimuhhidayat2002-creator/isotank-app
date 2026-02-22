@@ -5,9 +5,9 @@ class VacuumSuctionEvent {
   final String status;
   final double prePortableVacuum;
   final double preIsotankTemp;
-  final double startMachineVacuum;
-  final double? endMachineVacuum;
-  final double? postPortableVacuum;
+  final String startMachineVacuum;
+  final String? endMachineVacuum;
+  final String? postPortableVacuum;
   final double? postIsotankTemp;
   final List<VacuumMonitoringLog> logs;
 
@@ -31,21 +31,19 @@ class VacuumSuctionEvent {
       isotankId: json['isotank_id'] ?? 0,
       startTime: DateTime.parse(json['start_time']),
       status: json['status'],
-      prePortableVacuum: (json['pre_portable_vacuum'] as num).toDouble(),
+      prePortableVacuum: json['pre_portable_vacuum'].toString(),
       preIsotankTemp: (json['pre_isotank_temp'] as num).toDouble(),
-      startMachineVacuum: (json['start_machine_vacuum'] as num?)?.toDouble() ?? 0.0,
-      endMachineVacuum: (json['end_machine_vacuum'] as num?)?.toDouble(),
-      postPortableVacuum: (json['post_portable_vacuum'] as num?)?.toDouble(),
+      startMachineVacuum: json['start_machine_vacuum']?.toString() ?? '0',
+      endMachineVacuum: json['end_machine_vacuum']?.toString(),
+      postPortableVacuum: json['post_portable_vacuum']?.toString(),
       postIsotankTemp: (json['post_isotank_temp'] as num?)?.toDouble(),
       logs: (json['logs'] as List?)?.map((l) => VacuumMonitoringLog.fromJson(l)).toList() ?? [],
     );
   }
 }
 
-class VacuumMonitoringLog {
-  final int id;
   final DateTime readingAt;
-  final double vacuumValue;
+  final String vacuumValue;
   final double temperature;
   final String period;
 
@@ -61,7 +59,7 @@ class VacuumMonitoringLog {
     return VacuumMonitoringLog(
       id: json['id'],
       readingAt: DateTime.parse(json['reading_at']),
-      vacuumValue: (json['vacuum_value'] as num).toDouble(),
+      vacuumValue: json['vacuum_value'].toString(),
       temperature: (json['temperature'] as num).toDouble(),
       period: json['period'],
     );
