@@ -231,7 +231,7 @@ class _VacuumSuctionScreenState extends State<VacuumSuctionScreen> {
             const SizedBox(height: 16),
             TextField(controller: _prePortableCtrl, decoration: const InputDecoration(labelText: 'Portable Vacuum (mTorr)'), keyboardType: TextInputType.number),
             TextField(controller: _preTempCtrl, decoration: const InputDecoration(labelText: 'Isotank Temp (°C)'), keyboardType: TextInputType.number),
-            TextField(controller: _startMachineCtrl, decoration: const InputDecoration(labelText: 'Machine Vacuum Start (mTorr)'), keyboardType: TextInputType.number),
+            TextField(controller: _startMachineCtrl, decoration: const InputDecoration(labelText: 'Machine Vacuum Start (Scientific Torr)'), keyboardType: TextInputType.text),
             const SizedBox(height: 20),
             ElevatedButton(
               onPressed: _startSuction,
@@ -253,7 +253,7 @@ class _VacuumSuctionScreenState extends State<VacuumSuctionScreen> {
           children: [
             Text('Suction In Progress (Started: ${_activeEvent!.startTime})', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             const SizedBox(height: 16),
-            TextField(controller: _endMachineCtrl, decoration: const InputDecoration(labelText: 'Machine Vacuum End (mTorr)'), keyboardType: TextInputType.number),
+            TextField(controller: _endMachineCtrl, decoration: const InputDecoration(labelText: 'Machine Vacuum End (Scientific Torr)'), keyboardType: TextInputType.text),
             TextField(controller: _postPortableCtrl, decoration: const InputDecoration(labelText: 'Portable Vacuum After (mTorr)'), keyboardType: TextInputType.number),
             TextField(controller: _postTempCtrl, decoration: const InputDecoration(labelText: 'Isotank Temp After (°C)'), keyboardType: TextInputType.number),
             const SizedBox(height: 20),

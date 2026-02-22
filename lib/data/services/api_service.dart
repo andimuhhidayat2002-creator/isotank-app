@@ -620,6 +620,23 @@ class ApiService {
     }
   }
 
+  Future<List<dynamic>> getPendingVacuumIsotanks() async {
+    try {
+      final response = await _dio.get('/maintenance/vacuum/isotanks/pending');
+      final rawData = response.data;
+      
+      if (rawData is List) return rawData;
+      
+      if (rawData is Map && rawData.containsKey('data')) {
+        final dataField = rawData['data'];
+        if (dataField is List) return dataField;
+      }
+      return [];
+    } on DioException catch (e) {
+      throw _handleError(e);
+    }
+  }
+
   Future<List<dynamic>> getYardLayout() async {
     try {
       if (!_connectivity.isOnline) {

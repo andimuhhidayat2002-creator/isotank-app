@@ -7,8 +7,8 @@ class VacuumService {
 
   Future<List<dynamic>> getIsotanks() async {
     try {
-      // Use the already robust and tested search method from ApiService
-      return await _api.searchIsotanks('');
+      // Fetch only isotanks that have an active vacuum suction event
+      return await _api.getPendingVacuumIsotanks();
     } catch (e) {
       rethrow;
     }
@@ -16,7 +16,7 @@ class VacuumService {
 
   Future<VacuumSuctionEvent?> getActiveEvent(int isotankId) async {
     try {
-      final response = await _api.dio.get('/vacuum/suction/$isotankId/active');
+      final response = await _api.dio.get('/maintenance/vacuum/suction/$isotankId/active');
       
       // Handle Laravel wrapper { success: true, data: { ... } }
       final rawData = response.data;
@@ -31,7 +31,7 @@ class VacuumService {
 
   Future<VacuumSuctionEvent> startSuction(int isotankId, double prePortable, double preTemp, double startMachine) async {
     try {
-      final response = await _api.dio.post('/vacuum/suction/start', data: {
+      final response = await _api.dio.post('/maintenance/vacuum/suction/start', data: {
         'isotank_id': isotankId,
         'pre_portable_vacuum': prePortable,
         'pre_isotank_temp': preTemp,
@@ -49,7 +49,7 @@ class VacuumService {
 
   Future<void> finishSuction(int eventId, double endMachine, double postPortable, double postTemp) async {
     try {
-      await _api.dio.post('/vacuum/suction/$eventId/finish', data: {
+      await _api.dio.post('/maintenance/vacuum/suction/$eventId/finish', data: {
         'end_machine_vacuum': endMachine,
         'post_portable_vacuum': postPortable,
         'post_isotank_temp': postTemp
@@ -61,7 +61,7 @@ class VacuumService {
 
   Future<void> addMonitoringLog(int eventId, double vacuum, double temp, String period) async {
     try {
-      await _api.dio.post('/vacuum/monitoring/add', data: {
+      await _api.dio.post('/maintenance/vacuum/monitoring/add', data: {
         'suction_event_id': eventId,
         'vacuum_value': vacuum,
         'temperature': temp,
